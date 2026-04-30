@@ -1,11 +1,10 @@
 import type { Header } from "@tanstack/react-table";
-import type { StockRow } from "@/grid/types";
 import { flexRender } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import { ArrowUp, ArrowDown, ChevronsUpDown, GripVertical } from "lucide-react";
 
-interface GridHeaderCellProps {
-  header: Header<StockRow, unknown>;
+interface GridHeaderCellProps<TData, TValue> {
+  header: Header<TData, TValue>;
   draggedId: string | null;
   overId: string | null;
   onDragStart: (id: string) => void;
@@ -14,7 +13,7 @@ interface GridHeaderCellProps {
   onDragEnd: () => void;
 }
 
-export function GridHeaderCell({
+export function GridHeaderCell<TData, TValue>({
   header,
   draggedId,
   overId,
@@ -22,7 +21,7 @@ export function GridHeaderCell({
   onDragOver,
   onDrop,
   onDragEnd,
-}: GridHeaderCellProps) {
+}: GridHeaderCellProps<TData, TValue>) {
   const { column } = header;
   const canSort = column.getCanSort();
   const sorted = column.getIsSorted();
@@ -30,16 +29,16 @@ export function GridHeaderCell({
   const isOver = overId === column.id && draggedId !== column.id;
 
   return (
-    <th
-      key={header.id}
+    <div
+      role="columnheader"
       className={cn(
-        "relative select-none border-r border-border last:border-r-0 bg-muted/50",
+        "relative flex shrink-0 select-none border-r border-border last:border-r-0 bg-muted/50",
         "text-xs font-semibold text-muted-foreground uppercase tracking-wide",
         isOver && "bg-accent/60",
         isDragging && "opacity-40",
         column.getIsResizing() && "pointer-events-none",
       )}
-      style={{ width: header.getSize() }}
+      style={{ width: header.getSize(), flexBasis: header.getSize() }}
       draggable={!header.isPlaceholder && column.id !== "select"}
       onDragStart={() => onDragStart(column.id)}
       onDragOver={(e) => {
@@ -54,12 +53,11 @@ export function GridHeaderCell({
     >
       <div
         className={cn(
-          "flex items-center gap-1 px-2 py-2",
+          "flex items-center gap-1 px-2 py-2 w-full",
           canSort && "cursor-pointer hover:text-foreground transition-colors",
         )}
         onClick={canSort ? column.getToggleSortingHandler() : undefined}
       >
-        {/* Drag handle */}
         {column.id !== "select" && (
           <GripVertical className="size-3 shrink-0 text-muted-foreground/40 cursor-grab active:cursor-grabbing mr-0.5" />
         )}
@@ -71,7 +69,7 @@ export function GridHeaderCell({
         </span>
 
         {canSort && (
-          <span className="shrink-0">
+          <span className="shrink-0 flex items-center justify-center">
             {sorted === "asc" ? (
               <ArrowUp className="size-3 text-primary" />
             ) : sorted === "desc" ? (
@@ -83,18 +81,17 @@ export function GridHeaderCell({
         )}
       </div>
 
-      {/* Column resize handle */}
       {column.getCanResize() && (
         <div
           onMouseDown={header.getResizeHandler()}
           onTouchStart={header.getResizeHandler()}
           className={cn(
             "absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none",
-            "hover:bg-primary/50 transition-colors",
+            "hover:bg-primary/50 transition-colors z-10",
             column.getIsResizing() && "bg-primary",
           )}
         />
       )}
-    </th>
+    </div>
   );
 }

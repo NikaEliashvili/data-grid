@@ -43,11 +43,25 @@ export interface StyleCondition {
 }
 
 // ─── Column Meta ──────────────────────────────────────────────────────────────
+export type FilterOperator = "eq" | "neq" | "gt" | "gte" | "lt" | "lte";
+
+export interface ComparisonFilterState {
+  operator: FilterOperator;
+  value: string | number;
+}
+
 export interface GridColumnMeta<TData> {
   type: CellValueType;
   filterable?: boolean;
-  filterType?: "text" | "number" | "select" | "date" | "range";
-  filterOptions?: Array<{ label: string; value: string }>;
+  filterType?:
+    | "text"
+    | "select"
+    | "range"
+    | "date"
+    | "multiselect"
+    | "comparison"
+    | "checkbox";
+  filterOptions?: { label: string; value: string | number }[];
   editable?: boolean;
   pinned?: "left" | "right" | false;
   conditions?: StyleCondition[];

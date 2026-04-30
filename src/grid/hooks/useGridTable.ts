@@ -18,17 +18,17 @@ import {
 } from "@tanstack/react-table";
 import { useGridStore } from "@/grid/store/gridStore";
 import { filterFns } from "@/grid/engine/filterFunctions";
-import type { GridColumnDef, StockRow } from "@/grid/types";
+import type { GridColumnDef } from "@/grid/types";
 
-interface UseGridTableOptions {
-  data: StockRow[];
-  columns: GridColumnDef<StockRow>[];
+interface UseGridTableOptions<TData> {
+  data: TData[];
+  columns: GridColumnDef<TData>[];
 }
 
-export function useGridTable({
+export function useGridTable<TData>({
   data,
   columns,
-}: UseGridTableOptions): Table<StockRow> {
+}: UseGridTableOptions<TData>): Table<TData> {
   const {
     globalFilter,
     columnFilters,
@@ -50,7 +50,7 @@ export function useGridTable({
     setColumnOrder,
   } = useGridStore();
 
-  const table = useReactTable<StockRow>({
+  const table = useReactTable<TData>({
     data,
     columns,
     state: {
@@ -64,7 +64,7 @@ export function useGridTable({
       expanded: expanded,
       columnOrder: columnOrder,
     },
-    getRowId: (row) => row.id,
+    getRowId: (row) => (row as { id: string }).id,
     enableRowSelection: true,
     enableMultiRowSelection: true,
     enableColumnResizing: true,

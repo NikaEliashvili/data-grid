@@ -1,117 +1,62 @@
-import { useCallback, useState } from "react"
-import type { Column } from "@tanstack/react-table"
-import type { GridColumnMeta, StockRow } from "@/grid/types"
-import { cn } from "@/lib/utils"
+import type { Column } from "@tanstack/react-table";
+import type { GridDensity, GridColumnMeta } from "@/grid/types";
 
-interface ColumnFilterCellProps {
-  column: Column<StockRow>
-  density: "compact" | "normal" | "comfortable"
+// შემოვიტანოთ ცალკეული ფილტრის კომპონენტები
+import { TextFilter } from "./filters/TextFilter";
+import { SelectFilter } from "./filters/SelectFilter";
+import { RangeFilter } from "./filters/RangeFilter";
+import { DateFilter } from "./filters/DateFilter";
+import { CheckboxFilter } from "./filters/CheckboxFilter";
+import { ComparisonFilter } from "./filters/ComparisonFilter";
+import { MultiSelectFilter } from "./filters/MultiSelectFilter";
+
+export interface BaseFilterProps<TData, TValue> {
+  column: Column<TData, TValue>;
+  densityH: string;
+  meta: GridColumnMeta<TData>;
 }
 
-export function ColumnFilterCell({ column, density }: ColumnFilterCellProps) {
-  const meta = column.columnDef.meta as GridColumnMeta<StockRow> | undefined
-  const filterValue = column.getFilterValue()
-  const [rangeMin, setRangeMin] = useState<string>("")
-  const [rangeMax, setRangeMax] = useState<string>("")
+interface ColumnFilterCellProps<TData, TValue> {
+  column: Column<TData, TValue>;
+  density: GridDensity;
+}
 
-  const inputH = density === "compact" ? "h-6 text-xs" : density === "comfortable" ? "h-9" : "h-7 text-xs"
-
-  const handleText = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      column.setFilterValue(e.target.value || undefined)
-    },
-    [column]
-  )
-
-  const handleSelect = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      column.setFilterValue(e.target.value || undefined)
-    },
-    [column]
-  )
-
-  const handleRangeMin = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = e.target.value
-      setRangeMin(val)
-      const max = rangeMax
-      column.setFilterValue([val === "" ? "" : Number(val), max === "" ? "" : Number(max)] as [number | "", number | ""])
-    },
-    [column, rangeMax]
-  )
-
-  const handleRangeMax = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = e.target.value
-      setRangeMax(val)
-      column.setFilterValue([rangeMin === "" ? "" : Number(rangeMin), val === "" ? "" : Number(val)] as [number | "", number | ""])
-    },
-    [column, rangeMin]
-  )
+export function ColumnFilterCell<TData, TValue>({
+  column,
+  density,
+}: ColumnFilterCellProps<TData, TValue>) {
+  const meta = column.columnDef.meta as GridColumnMeta<TData> | undefined;
 
   if (!meta?.filterable) {
-    return <div className={cn("w-full", inputH)} />
+    return <div className="w-full h-7" />; // Placeholder
   }
 
-  if (meta.filterType === "select" && meta.filterOptions?.length) {
-    return (
-      <div className="w-full px-1">
-        <select
-          value={(filterValue as string) ?? ""}
-          onChange={handleSelect}
-          className={cn(
-            "w-full rounded border border-input bg-transparent px-1.5 text-xs outline-none focus:border-ring focus:ring-1 focus:ring-ring/50 transition-colors",
-            inputH
-          )}
-        >
-          <option value="">All</option>
-          {meta.filterOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
-      </div>
-    )
-  }
+  // სიმაღლის სტილების გენერაცია სიმჭიდროვის მიხედვით
+  const densityH =
+    density === "compact"
+      ? "h-6 text-xs"
+      : density === "comfortable"
+        ? "h-9 text-sm"
+        : "h-7 text-xs";
 
-  if (meta.filterType === "range") {
-    return (
-      <div className="flex gap-0.5 px-1 w-full">
-        <input
-          type="number"
-          placeholder="Min"
-          value={rangeMin}
-          onChange={handleRangeMin}
-          className={cn(
-            "w-1/2 rounded border border-input bg-transparent px-1 text-xs outline-none focus:border-ring focus:ring-1 focus:ring-ring/50 transition-colors min-w-0",
-            inputH
-          )}
-        />
-        <input
-          type="number"
-          placeholder="Max"
-          value={rangeMax}
-          onChange={handleRangeMax}
-          className={cn(
-            "w-1/2 rounded border border-input bg-transparent px-1 text-xs outline-none focus:border-ring focus:ring-1 focus:ring-ring/50 transition-colors min-w-0",
-            inputH
-          )}
-        />
-      </div>
-    )
-  }
+  const props = { column, densityH, meta };
 
-  return (
-    <div className="w-full px-1">
-      <input
-        type="text"
-        placeholder="Filter..."
-        value={(filterValue as string) ?? ""}
-        onChange={handleText}
-        className={cn(
-          "w-full rounded border border-input bg-transparent px-1.5 text-xs outline-none focus:border-ring focus:ring-1 focus:ring-ring/50 transition-colors",
-          inputH
-        )}
-      />
-    </div>
-  )
+  // Factory Switcher
+  switch (meta.filterType) {
+    case "select":
+      return <SelectFilter {...props} />;
+    case "range":
+      return <RangeFilter {...props} />;
+    case "date":
+      return <DateFilter {...props} />;
+    case "checkbox":
+      return <CheckboxFilter {...props} />;
+    case "comparison":
+      return <ComparisonFilter {...props} />;
+    case "multiselect":
+      return <MultiSelectFilter {...props} />;
+    case "text":
+    default:
+      return <TextFilter {...props} />;
+  }
 }

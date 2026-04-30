@@ -1,4 +1,5 @@
-import type { GridColumnDef, StockRow, GridConfig } from "@/grid/types";
+import { useMemo } from "react";
+import type { GridColumnDef, GridConfig } from "@/grid/types";
 import { useGridStore } from "@/grid/store/gridStore";
 import { useGridTable } from "@/grid/hooks/useGridTable";
 import { GridToolbar } from "@/grid/components/GridToolbar";
@@ -6,71 +7,53 @@ import { GridTable } from "@/grid/components/GridTable";
 import { GridPagination } from "@/grid/components/GridPagination";
 import { GridStatusBar } from "@/grid/components/GridStatusBar";
 import { useWorkerSearch } from "../hooks/useWorkerSearch";
-import { useMemo } from "react";
 
-interface DataGridProps {
-  config: GridConfig<StockRow>;
+interface DataGridProps<TData> {
+  config: GridConfig<TData>;
 }
 
-export function DataGrid({ config }: DataGridProps) {
-  // const { density } = useGridStore();
+export function DataGrid<TData>({ config }: DataGridProps<TData>) {
+  // ATOMIC SUBSCRIPTIONS: We only subscribe to what strictly affects the data pipeline.
+  // This prevents DataGrid from re-rendering when `density` or `rowSelection` changes!
+  const globalFilter = useGridStore((state) => state.globalFilter);
+  const columnVisibility = useGridStore((state) => state.columnVisibility);
 
-  // const table = useGridTable({
-  //   data: config.data,
-  //   columns: config.columns as GridColumnDef<StockRow>[],
-  // });
-
-  // const totalRows = config.data.length;
-  // const filteredRows = table.getFilteredRowModel().rows.length;
-
-  const { density, globalFilter, columnVisibility } = useGridStore();
-
-  // ვიღებთ მხოლოდ იმ სვეტების გასაღებებს, რომლებიც Store-ში დამალული (false) არ არის
   const visibleKeys = useMemo(() => {
     return config.columns
       .map((c) => c.accessorKey || c.id)
       .filter((key) => {
         if (!key) return false;
-        // თუ სვეტი აშკარად დამალულია (false), ამოვაგდებთ ძებნის სიიდან
         return columnVisibility[key] !== false;
       }) as string[];
   }, [config.columns, columnVisibility]);
 
-  // Worker-ს ვაწვდით მხოლოდ ხილული სვეტების ლისტს
   const { filteredData } = useWorkerSearch(
     config.data,
-    globalFilter,
+    globalFilter.toLowerCase(),
     visibleKeys,
   );
 
+  const tableData = globalFilter.length > 0 ? filteredData : config.data;
+
+  // useGridTable now receives completely stable references
   const table = useGridTable({
-    data: globalFilter.length > 0 ? filteredData : config.data,
-    columns: config.columns as GridColumnDef<StockRow>[],
+    data: tableData,
+    columns: config.columns as GridColumnDef<TData>[],
   });
 
   const totalRows = config.data.length;
-  const filteredRows = filteredData.length;
+  const filteredRows = tableData.length;
+  console.log("Re-renders...");
 
   return (
-    <div className="flex flex-col h-full border border-border rounded-lg overflow-hidden bg-background shadow-sm">
-      {/* Toolbar */}
+    <div className="flex flex-col h-full border border-border rounded-lg overflow-hidden bg-background shadow-sm max-h-205">
       <GridToolbar
         table={table}
         totalRows={totalRows}
         filteredRows={filteredRows}
       />
-
-      {/* Table area */}
-      <GridTable
-        table={table}
-        density={density}
-        onRowClick={config.onRowClick}
-      />
-
-      {/* Pagination */}
-      <GridPagination table={table} />
-
-      {/* Status Bar */}
+      <GridTable table={table} onRowClick={config.onRowClick} />
+      <GridPagination table={table} totalRows={totalRows} />
       <GridStatusBar table={table} />
     </div>
   );

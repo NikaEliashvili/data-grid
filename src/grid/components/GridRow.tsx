@@ -1,63 +1,62 @@
-import { memo } from "react";
 import type {
   ColumnOrderState,
   Row,
   VisibilityState,
 } from "@tanstack/react-table";
-import type { StockRow, GridDensity } from "@/grid/types";
 import { flexRender } from "@tanstack/react-table";
+import type { GridDensity } from "@/grid/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 
-interface GridRowProps {
-  row: Row<StockRow>;
+interface GridRowProps<TData> {
+  row: Row<TData>;
   density: GridDensity;
   isSelected: boolean;
-  onRowClick?: (row: StockRow) => void;
-  // 2. დაამატე ეს ორი პროპი memo-ს ქეშის გასატეხად
+  onRowClick?: (row: TData) => void;
   columnVisibility?: VisibilityState;
   columnOrder?: ColumnOrderState;
+  style?: React.CSSProperties; // Needed for Virtualizer Absolute Positioning
 }
 
 const DENSITY_CLASS: Record<GridDensity, string> = {
-  compact: "h-7",
-  normal: "h-9",
-  comfortable: "h-12",
+  compact: "h-9",
+  normal: "h-12",
+  comfortable: "h-14",
 };
 
 const DENSITY_CELL_CLASS: Record<GridDensity, string> = {
-  compact: "py-0.5 px-2",
-  normal: "py-1.5 px-2",
-  comfortable: "py-2.5 px-2",
+  compact: "py-1 px-2",
+  normal: "py-2 px-2",
+  comfortable: "py-3 px-2",
 };
 
-export const GridRow = memo(function GridRow({
+export function GridRow<TData>({
   row,
   density,
   isSelected,
   onRowClick,
-  // 3. მიიღე პროპები (არ არის სავალდებულო მათი სადმე ჩასმა JSX-ში)
-  columnVisibility,
-  columnOrder,
-}: GridRowProps) {
+  style,
+}: GridRowProps<TData>) {
   if (row.getIsGrouped()) {
     return (
-      <tr
-        key={`${columnVisibility}-${columnOrder}`}
+      <div
+        role="row"
+        style={style}
+        key={`${row.index}`}
         className={cn(
-          "border-b border-border bg-muted/30 hover:bg-muted/50 transition-all",
+          "flex items-center w-full border-b border-border bg-muted/30 hover:bg-muted/50 transition-all",
           DENSITY_CLASS[density],
         )}
       >
         {row.getVisibleCells().map((cell) => {
           if (cell.getIsGrouped()) {
             return (
-              <td
+              <div
                 key={cell.id}
-                colSpan={row.getVisibleCells().length}
+                role="cell"
                 className={cn(
-                  "px-2 font-semibold text-sm",
+                  "flex-1 px-2 font-semibold text-sm flex items-center",
                   DENSITY_CELL_CLASS[density],
                 )}
               >
@@ -76,19 +75,22 @@ export const GridRow = memo(function GridRow({
                     ({row.subRows.length})
                   </span>
                 </button>
-              </td>
+              </div>
             );
           }
           return null;
         })}
-      </tr>
+      </div>
     );
   }
 
   return (
-    <tr
+    <div
+      role="row"
+      key={`${row.index}`}
+      style={style}
       className={cn(
-        "border-b border-border transition-colors cursor-default",
+        "flex w-full border-b border-border transition-colors cursor-default items-center",
         "hover:bg-accent/50",
         isSelected && "bg-primary/5 dark:bg-primary/10",
         DENSITY_CLASS[density],
@@ -96,12 +98,19 @@ export const GridRow = memo(function GridRow({
       onClick={() => onRowClick?.(row.original)}
     >
       {row.getVisibleCells().map((cell) => {
-        if (cell.id.endsWith("_select")) {
+        const isSelectColumn =
+          cell.column.id === "select" || cell.id.endsWith("_select");
+
+        if (isSelectColumn) {
           return (
-            <td
+            <div
               key={cell.id}
-              className={cn("px-2 sticky-col", DENSITY_CELL_CLASS[density])}
-              style={{ width: 40 }}
+              role="cell"
+              className={cn(
+                "flex items-center justify-center shrink-0 px-2 sticky left-0 ",
+                DENSITY_CELL_CLASS[density],
+              )}
+              style={{ width: 40, flexBasis: 40 }}
               onClick={(e) => e.stopPropagation()}
             >
               <Checkbox
@@ -110,45 +119,37 @@ export const GridRow = memo(function GridRow({
                 aria-label="Select row"
                 className="size-3.5"
               />
-            </td>
-          );
-        }
-
-        if (cell.getIsAggregated()) {
-          return (
-            <td
-              key={cell.id}
-              className={cn(
-                "text-xs text-muted-foreground",
-                DENSITY_CELL_CLASS[density],
-              )}
-            >
-              {flexRender(
-                cell.column.columnDef.aggregatedCell ??
-                  cell.column.columnDef.cell,
-                cell.getContext(),
-              )}
-            </td>
+            </div>
           );
         }
 
         if (cell.getIsPlaceholder()) {
-          return <td key={cell.id} />;
+          return <div key={cell.id} role="cell" />;
         }
 
         return (
-          <td
+          <div
             key={cell.id}
+            role="cell"
             className={cn(
-              "text-sm border-r border-border/50 last:border-r-0 overflow-hidden",
+              "flex items-center text-sm border-r border-border/50 last:border-r-0 overflow-hidden shrink-0",
               DENSITY_CELL_CLASS[density],
             )}
-            style={{ maxWidth: cell.column.getSize() }}
+            style={{
+              width: cell.column.getSize(),
+              flexBasis: cell.column.getSize(),
+            }}
           >
-            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-          </td>
+            {cell.getIsAggregated()
+              ? flexRender(
+                  cell.column.columnDef.aggregatedCell ??
+                    cell.column.columnDef.cell,
+                  cell.getContext(),
+                )
+              : flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </div>
         );
       })}
-    </tr>
+    </div>
   );
-});
+}

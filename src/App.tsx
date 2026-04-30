@@ -34,7 +34,7 @@ export function App() {
           <div>
             <h1 className="text-sm font-semibold leading-none">DataGrid Pro</h1>
             <p className="text-xs text-muted-foreground leading-none mt-0.5">
-              AG Grid Alternative
+              Complex Data Grid
             </p>
           </div>
         </div>
@@ -42,14 +42,11 @@ export function App() {
         <Separator orientation="vertical" className="h-5" />
 
         <div className="flex items-center gap-1.5">
-          <Badge variant="secondary" className="text-xs">
-            Step 1
-          </Badge>
           <Badge
             variant="outline"
             className="text-xs font-normal text-muted-foreground"
           >
-            5,000 rows · TanStack Table · Zustand
+            Complex Data Grid built by TanStack Table & Zustand
           </Badge>
         </div>
 

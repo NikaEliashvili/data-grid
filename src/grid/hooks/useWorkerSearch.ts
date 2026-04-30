@@ -1,19 +1,17 @@
 import { useState, useEffect, useRef } from "react";
-import type { StockRow } from "@/grid/types";
 
-export function useWorkerSearch(
-  initialData: StockRow[],
+export function useWorkerSearch<TData>(
+  initialData: TData[],
   searchTerm: string,
   keys: string[],
 ) {
-  const [filteredData, setFilteredData] = useState<StockRow[]>(initialData);
+  const [filteredData, setFilteredData] = useState<TData[]>(initialData);
   const [isSearching, setIsSearching] = useState(false);
 
-  // ვინახავთ Worker-ის რეფერენსს
   const workerRef = useRef<Worker | null>(null);
 
+  // init worker once
   useEffect(() => {
-    // ვაინიციალიზებთ Worker-ს Vite-ის სპეციფიკური სინტაქსით (?worker)
     workerRef.current = new Worker(
       new URL("../engine/search.worker.ts", import.meta.url),
       { type: "module" },
@@ -25,17 +23,32 @@ export function useWorkerSearch(
     };
 
     return () => {
-      workerRef.current?.terminate(); // ვასუფთავებთ მეხსიერებას კომპონენტის მოშლისას
+      workerRef.current?.terminate();
     };
   }, []);
 
+  // send dataset once (or when it actually changes)
   useEffect(() => {
-    if (workerRef.current && searchTerm.length > 0) {
-      setIsSearching(true);
-      // ვაგზავნით მონაცემებს Worker-ში
-      workerRef.current.postMessage({ data: initialData, searchTerm, keys });
-    }
-  }, [initialData, keys, searchTerm]);
+    if (!workerRef.current) return;
+
+    workerRef.current.postMessage({
+      type: "init",
+      data: initialData,
+      keys,
+    });
+  }, [initialData, keys]);
+
+  // search (debounced)
+  useEffect(() => {
+    if (!workerRef.current) return;
+
+    setIsSearching(true);
+
+    workerRef.current.postMessage({
+      type: "search",
+      searchTerm: searchTerm,
+    });
+  }, [searchTerm]);
 
   return { filteredData, isSearching };
 }

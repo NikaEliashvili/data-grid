@@ -1,6 +1,6 @@
-import { create } from "zustand"
-import { subscribeWithSelector } from "zustand/middleware"
-import type { GridStore, GridDensity } from "@/grid/types"
+import { create } from "zustand";
+import { subscribeWithSelector } from "zustand/middleware";
+import type { GridStore, GridDensity } from "@/grid/types";
 import type {
   ColumnFiltersState,
   SortingState,
@@ -9,9 +9,9 @@ import type {
   PaginationState,
   GroupingState,
   ExpandedState,
-} from "@tanstack/react-table"
+} from "@tanstack/react-table";
 
-const DEFAULT_PAGE_SIZE = 50
+const DEFAULT_PAGE_SIZE = 50;
 
 const initialState = {
   globalFilter: "",
@@ -23,19 +23,25 @@ const initialState = {
   grouping: [] as GroupingState,
   expanded: {} as ExpandedState,
   columnOrder: [] as string[],
-  density: "normal" as GridDensity,
+  density: "comfortable" as GridDensity,
   sidebarOpen: false,
-}
+};
 
 export const useGridStore = create<GridStore>()(
   subscribeWithSelector((set) => ({
     ...initialState,
 
     setGlobalFilter: (value) =>
-      set({ globalFilter: value, pagination: { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE } }),
+      set({
+        globalFilter: value,
+        pagination: { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE },
+      }),
 
     setColumnFilters: (filters) =>
-      set({ columnFilters: filters, pagination: { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE } }),
+      set({
+        columnFilters: filters,
+        pagination: { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE },
+      }),
 
     setSorting: (sorting) => set({ sorting }),
 
@@ -56,5 +62,5 @@ export const useGridStore = create<GridStore>()(
     toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
 
     resetAll: () => set({ ...initialState }),
-  }))
-)
+  })),
+);
