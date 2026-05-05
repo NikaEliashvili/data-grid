@@ -117,7 +117,7 @@ export function GridRow<TData>({
                 checked={row.getIsSelected()}
                 onCheckedChange={(v) => row.toggleSelected(!!v)}
                 aria-label="Select row"
-                className="size-3.5"
+                className="size-3.5 rounded"
               />
             </div>
           );

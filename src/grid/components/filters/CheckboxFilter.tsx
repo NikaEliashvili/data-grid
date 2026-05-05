@@ -11,7 +11,7 @@ export function CheckboxFilter<TData, TValue>({
   return (
     <div className={cn("w-full flex items-center justify-center", densityH)}>
       <Checkbox
-        checked={val === undefined ? "indeterminate" : val}
+        checked={val}
         onCheckedChange={(checked) => {
           // ციკლი: Indeterminate -> True -> False -> Indeterminate
           if (checked === true) column.setFilterValue(true);

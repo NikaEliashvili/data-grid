@@ -5,7 +5,7 @@ import { useGridTable } from "@/grid/hooks/useGridTable";
 import { GridToolbar } from "@/grid/components/GridToolbar";
 import { GridTable } from "@/grid/components/GridTable";
 import { GridPagination } from "@/grid/components/GridPagination";
-import { GridStatusBar } from "@/grid/components/GridStatusBar";
+// import { GridStatusBar } from "@/grid/components/GridStatusBar";
 import { useWorkerSearch } from "../hooks/useWorkerSearch";
 
 interface DataGridProps<TData> {
@@ -46,7 +46,7 @@ export function DataGrid<TData>({ config }: DataGridProps<TData>) {
   console.log("Re-renders...");
 
   return (
-    <div className="flex flex-col h-full border border-border rounded-lg overflow-hidden bg-background shadow-sm max-h-205">
+    <div className="flex flex-col h-full border border-border rounded-lg bg-background shadow-sm max-h-205 overflow-hidden min-h-125">
       <GridToolbar
         table={table}
         totalRows={totalRows}
@@ -54,7 +54,8 @@ export function DataGrid<TData>({ config }: DataGridProps<TData>) {
       />
       <GridTable table={table} onRowClick={config.onRowClick} />
       <GridPagination table={table} totalRows={totalRows} />
-      <GridStatusBar table={table} />
+      {/* 
+      <GridStatusBar table={table} /> */}
     </div>
   );
 }

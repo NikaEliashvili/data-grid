@@ -6,6 +6,14 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 interface GridPaginationProps<TData> {
   table: Table<TData>;
@@ -33,18 +41,34 @@ export function GridPagination<TData>({
     <div className="flex items-center justify-between gap-3 px-3 py-2 border-t bg-card text-sm flex-wrap">
       {/* Page size */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground">Rows per page</span>
-        <select
-          value={pageSize}
-          onChange={(e) => table.setPageSize(Number(e.target.value))}
-          className="h-7 rounded border border-input bg-transparent px-2 text-xs outline-none focus:border-ring focus:ring-1 focus:ring-ring/50"
+        <span className="text-xs text-muted-foreground text-nowrap">
+          Rows per page{" "}
+        </span>
+
+        <Select
+          value={pageSize.toString()}
+          onValueChange={(value) => {
+            // Translate "all" back to undefined so TanStack knows to stop filtering
+            table.setPageSize(Number(value));
+          }}
         >
-          {[...PAGE_SIZES, totalRows].map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger
+            className={cn(
+              "w-full rounded border border-input bg-transparent px-2 outline-none focus:ring-1 focus:ring-ring/50 transition-colors ",
+              "h-8 w-20 py-0",
+            )}
+          >
+            <SelectValue placeholder="All" />
+          </SelectTrigger>
+          <SelectContent align="centerTop">
+            <SelectItem value="all">All</SelectItem>
+            {[...PAGE_SIZES, totalRows].map((opt) => (
+              <SelectItem key={opt.toString()} value={opt.toString()}>
+                {opt}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Row info */}
@@ -57,7 +81,7 @@ export function GridPagination<TData>({
       <div className="flex items-center gap-1">
         <Button
           variant="outline"
-          size="icon-sm"
+          size="icon"
           onClick={() => table.setPageIndex(0)}
           disabled={!canPrev}
           className="size-7"
@@ -66,7 +90,7 @@ export function GridPagination<TData>({
         </Button>
         <Button
           variant="outline"
-          size="icon-sm"
+          size="icon"
           onClick={() => table.previousPage()}
           disabled={!canPrev}
           className="size-7"
@@ -94,7 +118,7 @@ export function GridPagination<TData>({
 
         <Button
           variant="outline"
-          size="icon-sm"
+          size="icon"
           onClick={() => table.nextPage()}
           disabled={!canNext}
           className="size-7"
@@ -103,7 +127,7 @@ export function GridPagination<TData>({
         </Button>
         <Button
           variant="outline"
-          size="icon-sm"
+          size="icon"
           onClick={() => table.setPageIndex(pageCount - 1)}
           disabled={!canNext}
           className="size-7"

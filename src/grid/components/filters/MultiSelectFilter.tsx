@@ -74,6 +74,7 @@ export function MultiSelectFilter<TData, TValue>({
                   return (
                     <CommandItem
                       key={option.value}
+                      value={option.value.toString()}
                       onSelect={() => {
                         const newSelectedValues = new Set(selectedValues);
                         const valString = option.value.toString();
@@ -109,6 +110,7 @@ export function MultiSelectFilter<TData, TValue>({
                   <CommandSeparator />
                   <CommandGroup>
                     <CommandItem
+                      value={column.getFilterValue.toString()}
                       onSelect={() => column.setFilterValue(undefined)}
                       className="justify-center text-center text-xs"
                     >

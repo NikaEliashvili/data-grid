@@ -73,7 +73,7 @@ export function GridTable<TData>({ table, onRowClick }: GridTableProps<TData>) {
                   checked={table.getIsAllPageRowsSelected()}
                   onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
                   aria-label="Select all"
-                  className="size-3.5"
+                  className="size-3.5 rounded"
                 />
               </div>
               {headerGroup.headers

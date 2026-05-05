@@ -204,7 +204,7 @@ export function GridColumnToggler<TData>({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+      <DropdownMenuTrigger>
         <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
           <SlidersHorizontal className="size-3.5" />
           Columns
@@ -221,7 +221,7 @@ export function GridColumnToggler<TData>({
           <DropdownMenuCheckboxItem
             key={col.id}
             checked={col.getIsVisible()}
-            onCheckedChange={(v) => col.toggleVisibility(v)}
+            onCheckedChange={(v: boolean) => col.toggleVisibility(v)}
             className="text-xs"
             onSelect={(e) => e.preventDefault()}
           >
@@ -245,7 +245,7 @@ export function GridExport<TData>({ table }: TableSubComponentProps<TData>) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+      <DropdownMenuTrigger>
         <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
           <Download className="size-3.5" />
           Export

@@ -28,8 +28,7 @@ export function SelectFilter<TData, TValue>({
       >
         <SelectTrigger
           className={cn(
-            "w-full rounded border border-input bg-transparent px-2 outline-none focus:ring-1 focus:ring-ring/50 transition-colors",
-            // Remove shadcn's default h-10 to respect your table's density settings
+            "w-full rounded border border-input bg-transparent px-2 outline-none focus:ring-1 focus:ring-ring/50 transition-colors ",
             "h-auto py-0",
             densityH,
           )}

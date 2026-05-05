@@ -30,7 +30,7 @@ export function ComparisonFilter<TData, TValue>({
         operator: "eq",
         value: "",
       },
-    [],
+    [column],
   );
 
   const setOperator = useCallback(
@@ -58,7 +58,7 @@ export function ComparisonFilter<TData, TValue>({
       )}
     >
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
+        <DropdownMenuTrigger>
           <Button
             variant="ghost"
             className="h-full px-2 rounded-none border-r border-input text-xs hover:bg-muted font-mono"

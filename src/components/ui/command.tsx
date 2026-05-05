@@ -1,193 +1,186 @@
-import * as React from "react"
-import { Command as CommandPrimitive } from "cmdk"
+"use client";
 
-import { cn } from "@/lib/utils"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
-  InputGroup,
-  InputGroupAddon,
-} from "@/components/ui/input-group"
-import { SearchIcon, CheckIcon } from "lucide-react"
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
-function Command({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive>) {
-  return (
-    <CommandPrimitive
-      data-slot="command"
-      className={cn(
-        "flex size-full flex-col overflow-hidden rounded-xl! bg-popover p-1 text-popover-foreground",
-        className
-      )}
-      {...props}
-    />
-  )
+interface CommandContextType {
+  search: string;
+  setSearch: (s: string) => void;
+  matchCount: number;
+  registerMatch: (id: string, isMatch: boolean) => void;
 }
 
-function CommandDialog({
-  title = "Command Palette",
-  description = "Search for a command to run...",
+const CommandContext = React.createContext<CommandContextType | null>(null);
+
+export function Command({
   children,
   className,
-  showCloseButton = false,
-  ...props
-}: React.ComponentProps<typeof Dialog> & {
-  title?: string
-  description?: string
-  className?: string
-  showCloseButton?: boolean
+}: {
+  children: React.ReactNode;
+  className?: string;
 }) {
+  const [search, setSearch] = React.useState("");
+  const [matches, setMatches] = React.useState<Record<string, boolean>>({});
+
+  const registerMatch = React.useCallback((id: string, isMatch: boolean) => {
+    setMatches((prev) => {
+      if (prev[id] === isMatch) return prev;
+      return { ...prev, [id]: isMatch };
+    });
+  }, []);
+
+  const matchCount = Object.values(matches).filter(Boolean).length;
+
+  const value = React.useMemo(
+    () => ({
+      search,
+      setSearch,
+      matchCount,
+      registerMatch,
+    }),
+    [search, matchCount, registerMatch],
+  );
+
   return (
-    <Dialog {...props}>
-      <DialogHeader className="sr-only">
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
-      </DialogHeader>
-      <DialogContent
+    <CommandContext.Provider value={value}>
+      <div
         className={cn(
-          "top-1/3 translate-y-0 overflow-hidden rounded-xl! p-0",
-          className
+          "flex h-full w-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground",
+          className,
         )}
-        showCloseButton={showCloseButton}
       >
         {children}
-      </DialogContent>
-    </Dialog>
-  )
+      </div>
+    </CommandContext.Provider>
+  );
 }
 
-function CommandInput({
+export function CommandInput({
+  placeholder,
   className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.Input>) {
+}: {
+  placeholder?: string;
+  className?: string;
+}) {
+  const context = React.useContext(CommandContext);
+  if (!context) throw new Error("CommandInput must be used within Command");
+
   return (
-    <div data-slot="command-input-wrapper" className="p-1 pb-0">
-      <InputGroup className="h-8! rounded-lg! border-input/30 bg-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2!">
-        <CommandPrimitive.Input
-          data-slot="command-input"
-          className={cn(
-            "w-full text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
-            className
-          )}
-          {...props}
-        />
-        <InputGroupAddon>
-          <SearchIcon className="size-4 shrink-0 opacity-50" />
-        </InputGroupAddon>
-      </InputGroup>
+    <div className="flex items-center border-b px-3" cmnd-input-wrapper="">
+      <input
+        className={cn(
+          "flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+          className,
+        )}
+        placeholder={placeholder}
+        value={context.search}
+        onChange={(e) => context.setSearch(e.target.value)}
+      />
     </div>
-  )
+  );
 }
 
-function CommandList({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.List>) {
-  return (
-    <CommandPrimitive.List
-      data-slot="command-list"
-      className={cn(
-        "no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto outline-none",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-function CommandEmpty({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.Empty>) {
-  return (
-    <CommandPrimitive.Empty
-      data-slot="command-empty"
-      className={cn("py-6 text-center text-sm", className)}
-      {...props}
-    />
-  )
-}
-
-function CommandGroup({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.Group>) {
-  return (
-    <CommandPrimitive.Group
-      data-slot="command-group"
-      className={cn(
-        "overflow-hidden p-1 text-foreground **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-muted-foreground",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-function CommandSeparator({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.Separator>) {
-  return (
-    <CommandPrimitive.Separator
-      data-slot="command-separator"
-      className={cn("-mx-1 h-px bg-border", className)}
-      {...props}
-    />
-  )
-}
-
-function CommandItem({
-  className,
+export function CommandList({
   children,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.Item>) {
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <CommandPrimitive.Item
-      data-slot="command-item"
+    <div
       className={cn(
-        "group/command-item relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-lg! data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-selected:bg-muted data-selected:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-selected:*:[svg]:text-foreground",
-        className
+        "max-h-75 overflow-y-auto overflow-x-hidden p-1",
+        className,
       )}
-      {...props}
     >
       {children}
-      <CheckIcon className="ml-auto opacity-0 group-has-data-[slot=command-shortcut]/command-item:hidden group-data-[checked=true]/command-item:opacity-100" />
-    </CommandPrimitive.Item>
-  )
+    </div>
+  );
 }
 
-function CommandShortcut({
+export function CommandEmpty({
+  children,
   className,
-  ...props
-}: React.ComponentProps<"span">) {
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const context = React.useContext(CommandContext);
+  if (!context) throw new Error("CommandEmpty must be used within Command");
+
+  if (context.matchCount > 0 || !context.search) return null;
+
   return (
-    <span
-      data-slot="command-shortcut"
-      className={cn(
-        "ml-auto text-xs tracking-widest text-muted-foreground group-data-selected/command-item:text-foreground",
-        className
-      )}
-      {...props}
-    />
-  )
+    <div className={cn("py-6 text-center text-sm", className)}>{children}</div>
+  );
 }
 
-export {
-  Command,
-  CommandDialog,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandShortcut,
-  CommandSeparator,
+export function CommandGroup({
+  children,
+  heading,
+  className,
+}: {
+  children: React.ReactNode;
+  heading?: string;
+  className?: string;
+}) {
+  return (
+    <div className={cn("overflow-hidden p-1 text-foreground", className)}>
+      {heading && (
+        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+          {heading}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+interface CommandItemProps extends React.HTMLAttributes<HTMLDivElement> {
+  value: string;
+  onSelect?: () => void;
+  disabled?: boolean;
+}
+
+export function CommandItem({
+  children,
+  onSelect,
+  className,
+  value,
+  disabled,
+  ...props
+}: CommandItemProps) {
+  const context = React.useContext(CommandContext);
+  if (!context) throw new Error("CommandItem must be used within Command");
+
+  const id = React.useId();
+  const isMatch = value.toLowerCase().includes(context.search.toLowerCase());
+
+  React.useEffect(() => {
+    context.registerMatch(id, isMatch);
+    return () => context.registerMatch(id, false);
+  }, [id, isMatch, context]);
+
+  if (!isMatch) return null;
+
+  return (
+    <div
+      {...props}
+      onClick={() => {
+        if (!disabled) onSelect?.();
+      }}
+      className={cn(
+        "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
+        disabled && "pointer-events-none opacity-50",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function CommandSeparator({ className }: { className?: string }) {
+  return <div className={cn("-mx-1 my-1 h-px bg-muted", className)} />;
 }
