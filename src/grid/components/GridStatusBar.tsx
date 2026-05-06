@@ -1,15 +1,19 @@
 import { memo, useMemo } from "react";
-import type { Table } from "@tanstack/react-table";
+import type { Row } from "@tanstack/react-table";
 
 // Note: If you are making this a generic library, calculating "price" should be passed
 // as an external prop/function. For now, we assume TData has a price property.
 interface GridStatusBarProps<TData> {
-  table: Table<TData>;
+  selectedRows: Row<TData>[];
+  filteredRows: Row<TData>[];
 }
 
-function GridStatusBarInner<TData>({ table }: GridStatusBarProps<TData>) {
-  const selectedRows = table.getSelectedRowModel().rows;
-  const filteredRows = table.getFilteredRowModel().rows;
+function GridStatusBarInner<TData>({
+  selectedRows,
+  filteredRows,
+}: GridStatusBarProps<TData>) {
+  // const selectedRows = table.getSelectedRowModel().rows;
+  // const filteredRows = table.getFilteredRowModel().rows;
 
   const selectedCount = selectedRows.length;
   const activeRows = selectedCount > 0 ? selectedRows : filteredRows;

@@ -5,7 +5,7 @@ import { useGridTable } from "@/grid/hooks/useGridTable";
 import { GridToolbar } from "@/grid/components/GridToolbar";
 import { GridTable } from "@/grid/components/GridTable";
 import { GridPagination } from "@/grid/components/GridPagination";
-// import { GridStatusBar } from "@/grid/components/GridStatusBar";
+import { GridStatusBar } from "@/grid/components/GridStatusBar";
 import { useWorkerSearch } from "../hooks/useWorkerSearch";
 
 interface DataGridProps<TData> {
@@ -13,8 +13,6 @@ interface DataGridProps<TData> {
 }
 
 export function DataGrid<TData>({ config }: DataGridProps<TData>) {
-  // ATOMIC SUBSCRIPTIONS: We only subscribe to what strictly affects the data pipeline.
-  // This prevents DataGrid from re-rendering when `density` or `rowSelection` changes!
   const globalFilter = useGridStore((state) => state.globalFilter);
   const columnVisibility = useGridStore((state) => state.columnVisibility);
 
@@ -43,19 +41,40 @@ export function DataGrid<TData>({ config }: DataGridProps<TData>) {
 
   const totalRows = config.data.length;
   const filteredRows = tableData.length;
-  console.log("Re-renders...");
+  const selectedCount = Object.keys(table.getState().rowSelection).length;
+  const columns = table.getAllLeafColumns();
+  const hideableColumns = useMemo(
+    () => columns.filter((c) => c.getCanHide()),
+    [columns],
+  );
 
   return (
     <div className="flex flex-col h-full border border-border rounded-lg bg-background shadow-sm max-h-205 overflow-hidden min-h-125">
       <GridToolbar
-        table={table}
         totalRows={totalRows}
         filteredRows={filteredRows}
+        hideableColumns={hideableColumns}
+        selectedCount={selectedCount}
+        table={table}
       />
       <GridTable table={table} onRowClick={config.onRowClick} />
-      <GridPagination table={table} totalRows={totalRows} />
-      {/* 
-      <GridStatusBar table={table} /> */}
+      <GridPagination
+        pageIndex={table.getState().pagination.pageIndex}
+        pageSize={table.getState().pagination.pageSize}
+        pageCount={table.getPageCount()}
+        canPrev={table.getCanPreviousPage()}
+        canNext={table.getCanNextPage()}
+        filteredRowCount={table.getFilteredRowModel().rows.length}
+        totalRows={totalRows}
+        setPageSize={table.setPageSize}
+        setPageIndex={table.setPageIndex}
+        previousPage={table.previousPage}
+        nextPage={table.nextPage}
+      />
+      <GridStatusBar
+        filteredRows={table.getFilteredRowModel().rows}
+        selectedRows={table.getSelectedRowModel().rows}
+      />
     </div>
   );
 }

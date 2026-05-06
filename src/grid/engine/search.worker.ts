@@ -1,34 +1,13 @@
-type Primitive = string | number | boolean | null | undefined;
+// engine/search.worker.ts
+import type {
+  WorkerMessage,
+  SearchableKeys,
+  IndexedRow,
+  ColumnFilterDef,
+} from "./types";
 
-// restrict searchable fields to safe primitive values
-type SearchableKeys<T> = {
-  [K in keyof T]: T[K] extends Primitive ? K : never;
-}[keyof T];
-
-type IndexedRow<T> = {
-  raw: T;
-  searchText: string;
-};
-
-type InitMessage<T> = {
-  type: "init";
-  data: T[];
-  keys: SearchableKeys<T>[];
-};
-
-type SearchMessage = {
-  type: "search";
-  searchTerm: string;
-};
-
-type WorkerMessage<T> = InitMessage<T> | SearchMessage;
-
-// internal state (generic via function scope trick)
 function createWorkerState<T>() {
   let dataset: IndexedRow<T>[] = [];
-  let prevSearch = "";
-  let prevResult: IndexedRow<T>[] = [];
-
   const MAX_RESULTS = 1000;
 
   function buildIndex(data: T[], keys: SearchableKeys<T>[]): IndexedRow<T>[] {
@@ -44,69 +23,105 @@ function createWorkerState<T>() {
     }));
   }
 
-  function filterData(source: IndexedRow<T>[], term: string) {
-    const lower = term.toLowerCase();
-    const result: IndexedRow<T>[] = [];
-
-    for (let i = 0; i < source.length; i++) {
-      if (source[i].searchText.includes(lower)) {
-        result.push(source[i]);
-        if (result.length >= MAX_RESULTS) break;
+  // Strictly typed filter evaluator
+  function evaluateColumnFilter(
+    val: T[keyof T],
+    filter: ColumnFilterDef<T>,
+  ): boolean {
+    switch (filter.type) {
+      case "numberRange": {
+        if (typeof val !== "number") return false;
+        const [min, max] = filter.value;
+        if (min !== "" && val < min) return false;
+        if (max !== "" && val > max) return false;
+        return true;
+      }
+      case "exactMatch": {
+        return String(val ?? "") === filter.value;
+      }
+      case "multiSelect": {
+        if (!filter.value.length) return true;
+        return filter.value.includes(String(val ?? ""));
+      }
+      case "contains": {
+        if (!filter.value) return true;
+        return String(val ?? "")
+          .toLowerCase()
+          .includes(filter.value.toLowerCase());
+      }
+      case "comparison": {
+        if (!filter.value || !filter.value.value) return true;
+        const { operator, value } = filter.value;
+        // Safe string/number comparison based on your logic
+        if (operator === "eq") return val == value;
+        if (operator === "neq") return val != value;
+        if (operator === "gt") return Number(val) > Number(value);
+        if (operator === "gte") return Number(val) >= Number(value);
+        if (operator === "lt") return Number(val) < Number(value);
+        if (operator === "lte") return Number(val) <= Number(value);
+        return true;
+      }
+      case "globalFuzzy": {
+        // Handled via the global string index below for performance
+        return true;
+      }
+      // Exhaustiveness check ensures we never miss a type
+      default: {
+        return true;
       }
     }
-
-    return result;
   }
 
   return {
     handleMessage(event: MessageEvent<WorkerMessage<T>>) {
-      const { type } = event.data;
+      const msg = event.data;
 
-      if (type === "init") {
-        const { data, keys } = event.data;
-
-        dataset = buildIndex(data, keys);
-        prevSearch = "";
-        prevResult = dataset;
-
+      if (msg.type === "init") {
+        dataset = buildIndex(msg.data, msg.keys);
+        self.postMessage(dataset.slice(0, MAX_RESULTS).map((r) => r.raw));
         return;
       }
 
-      if (type === "search") {
-        const { searchTerm } = event.data;
+      if (msg.type === "filter") {
+        const { globalFilter, columnFilters } = msg;
+        const lowerGlobal = globalFilter.toLowerCase();
+        const result: T[] = [];
 
-        if (!searchTerm) {
-          prevSearch = "";
-          prevResult = dataset;
+        // Loop execution is highly optimized
+        for (let i = 0; i < dataset.length; i++) {
+          const indexedRow = dataset[i];
+          let passesAll = true;
 
-          self.postMessage(dataset.slice(0, MAX_RESULTS).map((r) => r.raw));
-          return;
+          // 1. Column Filters Evaluation
+          for (let j = 0; j < columnFilters.length; j++) {
+            const filter = columnFilters[j];
+            const val = indexedRow.raw[filter.id];
+
+            if (!evaluateColumnFilter(val, filter)) {
+              passesAll = false;
+              break;
+            }
+          }
+
+          if (!passesAll) continue;
+
+          // 2. Global Filter Evaluation (using pre-indexed string)
+          if (lowerGlobal && !indexedRow.searchText.includes(lowerGlobal)) {
+            continue;
+          }
+
+          result.push(indexedRow.raw);
+          if (result.length >= MAX_RESULTS) break; // Prevent main thread serialization lag
         }
 
-        let source: IndexedRow<T>[];
-
-        // incremental filtering
-        if (searchTerm.startsWith(prevSearch)) {
-          source = prevResult;
-        } else {
-          source = dataset;
-        }
-
-        const result = filterData(source, searchTerm);
-
-        prevSearch = searchTerm;
-        prevResult = result;
-
-        self.postMessage(result.map((r) => r.raw));
+        self.postMessage(result);
       }
     },
   };
 }
 
-// 👇 instantiate with your actual type
-// (this keeps the worker generic internally but concrete at usage)
+// Instantiate with actual type
 type AppRow = import("@/grid/types").StockRow;
-
 const worker = createWorkerState<AppRow>();
 
 self.onmessage = (event: MessageEvent<WorkerMessage<AppRow>>) => {

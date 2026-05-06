@@ -218,3 +218,31 @@ export interface FindState {
   currentIndex: number;
   totalMatches: number;
 }
+
+export type FilterFnName =
+  | "globalFuzzy"
+  | "numberRange"
+  | "exactMatch"
+  | "multiSelect"
+  | "contains"
+  | "comparison";
+
+export type ColumnFilterState = {
+  id: string; // The column key
+  type: FilterFnName;
+  value: unknown;
+};
+
+export type FilterMessage = {
+  type: "filter";
+  globalFilter: string;
+  columnFilters: ColumnFilterState[];
+};
+
+export type InitMessage<T> = {
+  type: "init";
+  data: T[];
+  searchableKeys: string[];
+};
+
+export type WorkerMessage<T> = InitMessage<T> | FilterMessage;

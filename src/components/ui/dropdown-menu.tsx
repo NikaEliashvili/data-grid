@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { Button } from "./button";
 
 const DropdownContext = React.createContext<{
   isOpen: boolean;
@@ -42,15 +43,16 @@ export function DropdownMenu({ children }: { children: React.ReactNode }) {
   );
 }
 
-// 3. The Trigger
+type DropdownMenuTriggerProps = React.ComponentPropsWithoutRef<typeof Button>;
+
 export const DropdownMenuTrigger = React.forwardRef<
-  HTMLButtonElement,
-  React.ButtonHTMLAttributes<HTMLButtonElement>
+  React.ElementRef<typeof Button>,
+  DropdownMenuTriggerProps
 >(({ className, children, onClick, ...props }, ref) => {
   const { isOpen, setIsOpen } = useDropdown();
 
   return (
-    <button
+    <Button
       ref={ref}
       type="button"
       onClick={(e) => {
@@ -61,9 +63,10 @@ export const DropdownMenuTrigger = React.forwardRef<
       {...props}
     >
       {children}
-    </button>
+    </Button>
   );
 });
+
 DropdownMenuTrigger.displayName = "DropdownMenuTrigger";
 
 // 4. The Content (Pure CSS Absolute Positioning)
@@ -145,6 +148,7 @@ export const DropdownMenuCheckboxItem = React.forwardRef<
     checked?: boolean;
     onCheckedChange?: (checked: boolean) => void;
     disabled?: boolean;
+    autoClose?: boolean;
   }
 >(
   (
@@ -155,6 +159,7 @@ export const DropdownMenuCheckboxItem = React.forwardRef<
       onCheckedChange,
       disabled,
       onClick,
+      autoClose = true,
       ...props
     },
     ref,
@@ -166,14 +171,10 @@ export const DropdownMenuCheckboxItem = React.forwardRef<
         ref={ref}
         onClick={(e) => {
           if (disabled) return;
-
+          if (autoClose) setIsOpen(false);
           // Trigger the custom change handler
           onCheckedChange?.(!checked);
           onClick?.(e);
-
-          // Radix default behavior is to close the menu on selection.
-          // If you want checkboxes to keep the menu open, simply remove this line.
-          setIsOpen(false);
         }}
         className={cn(
           "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors",

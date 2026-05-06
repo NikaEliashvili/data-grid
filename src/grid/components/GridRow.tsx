@@ -1,5 +1,6 @@
 import type {
   ColumnOrderState,
+  ColumnSizingState,
   Row,
   VisibilityState,
 } from "@tanstack/react-table";
@@ -8,6 +9,7 @@ import type { GridDensity } from "@/grid/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
+import { memo } from "react";
 
 interface GridRowProps<TData> {
   row: Row<TData>;
@@ -16,7 +18,8 @@ interface GridRowProps<TData> {
   onRowClick?: (row: TData) => void;
   columnVisibility?: VisibilityState;
   columnOrder?: ColumnOrderState;
-  style?: React.CSSProperties; // Needed for Virtualizer Absolute Positioning
+  columnSizing?: ColumnSizingState;
+  transformTop?: number; // Needed for Virtualizer Absolute Positioning
 }
 
 const DENSITY_CLASS: Record<GridDensity, string> = {
@@ -31,18 +34,25 @@ const DENSITY_CELL_CLASS: Record<GridDensity, string> = {
   comfortable: "py-3 px-2",
 };
 
-export function GridRow<TData>({
+export function GridRowInner<TData>({
   row,
   density,
   isSelected,
   onRowClick,
-  style,
+  transformTop,
 }: GridRowProps<TData>) {
   if (row.getIsGrouped()) {
     return (
       <div
         role="row"
-        style={style}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          transform: `translateY(${transformTop}px)`,
+          willChange: "transform",
+        }}
         key={`${row.index}`}
         className={cn(
           "flex items-center w-full border-b border-border bg-muted/30 hover:bg-muted/50 transition-all",
@@ -88,7 +98,14 @@ export function GridRow<TData>({
     <div
       role="row"
       key={`${row.index}`}
-      style={style}
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100%",
+        transform: `translateY(${transformTop}px)`,
+        willChange: "transform",
+      }}
       className={cn(
         "flex w-full border-b border-border transition-colors cursor-default items-center",
         "hover:bg-accent/50",
@@ -153,3 +170,5 @@ export function GridRow<TData>({
     </div>
   );
 }
+
+export const GridRow = memo(GridRowInner) as typeof GridRowInner;

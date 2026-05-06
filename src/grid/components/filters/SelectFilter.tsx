@@ -13,8 +13,6 @@ export function SelectFilter<TData, TValue>({
   densityH,
   meta,
 }: BaseFilterProps<TData, TValue>) {
-  // TanStack uses 'undefined' for an empty filter. Shadcn UI expects a string.
-  // We use "all" as our fallback string to represent the cleared state.
   const filterValue = (column.getFilterValue() as string) ?? "all";
 
   return (
@@ -22,7 +20,6 @@ export function SelectFilter<TData, TValue>({
       <Select
         value={filterValue}
         onValueChange={(value) => {
-          // Translate "all" back to undefined so TanStack knows to stop filtering
           column.setFilterValue(value === "all" ? undefined : value);
         }}
       >

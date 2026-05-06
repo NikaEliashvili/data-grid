@@ -1,10 +1,11 @@
 import { type FilterFn } from "@tanstack/react-table";
-import type { StockRow } from "@/grid/types";
+import type { ComparisonFilterState, StockRow } from "@/grid/types";
 import { rankItem, type RankingInfo } from "@tanstack/match-sorter-utils";
 
 declare module "@tanstack/react-table" {
   interface FilterMeta {
     itemRank: RankingInfo;
+    comparison: FilterFn<unknown>;
   }
 }
 
@@ -82,6 +83,32 @@ export const containsFilter: FilterFn<StockRow> = (
 containsFilter.autoRemove = (val: unknown) =>
   !val || (val as string).length === 0;
 
+export const comparison: FilterFn<StockRow> = (
+  row,
+  columnId,
+  filterValue: ComparisonFilterState,
+) => {
+  const rowValue = row.getValue(columnId) as number | string;
+  const { operator, value } = filterValue;
+  console.log("Filter...");
+
+  if (!value) return true; // Don't filter if input is empty
+
+  // Do the actual comparison
+  if (operator === "eq") return rowValue == value;
+  if (operator === "neq") return rowValue != value;
+  if (operator === "gt") return rowValue > value;
+  if (operator === "gte") return rowValue >= value;
+  if (operator === "lt") return rowValue < value;
+  if (operator === "lte") return rowValue <= value;
+
+  return true;
+};
+
+comparison.autoRemove = (val: ComparisonFilterState) => {
+  return !val || !val.value || val.value.toString().trim() === "";
+};
+
 // ─── Filter Function Registry ─────────────────────────────────────────────────
 export const filterFns = {
   globalFuzzy: globalFuzzyFilter,
@@ -89,6 +116,7 @@ export const filterFns = {
   exactMatch: exactMatchFilter,
   multiSelect: multiSelectFilter,
   contains: containsFilter,
+  comparison,
 } as const;
 
 export type FilterFnName = keyof typeof filterFns;

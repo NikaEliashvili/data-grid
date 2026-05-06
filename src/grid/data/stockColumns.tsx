@@ -7,6 +7,7 @@ import { ChangeCell } from "./ChangeCell";
 import { BarCell } from "./BarCell";
 import { SignalBadge } from "./SignalBadge";
 import { StatusBadge } from "./StatusBadge";
+import { filterFns } from "../engine/filterFunctions";
 
 export const STOCK_COLUMNS: GridColumnDef<StockRow>[] = [
   {
@@ -123,11 +124,12 @@ export const STOCK_COLUMNS: GridColumnDef<StockRow>[] = [
     id: "change",
     accessorFn: (row) => row.change,
     header: "Change",
+    filterFn: filterFns.comparison,
     size: 170,
     meta: {
       type: "number",
       filterable: true,
-      filterType: "range",
+      filterType: "comparison",
       minWidth: 140,
     },
     cell: ({ row }) => (

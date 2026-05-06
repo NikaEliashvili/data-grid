@@ -1,5 +1,3 @@
-// components/filters/ComparisonFilter.tsx
-import { useCallback, useMemo } from "react";
 import type { BaseFilterProps } from "../ColumnFilterCell";
 import type { ComparisonFilterState, FilterOperator } from "@/grid/types";
 import { cn } from "@/lib/utils";
@@ -9,7 +7,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
 
 const OPERATORS: { value: FilterOperator; label: string; icon: string }[] = [
   { value: "eq", label: "Equals", icon: "=" },
@@ -20,51 +17,54 @@ const OPERATORS: { value: FilterOperator; label: string; icon: string }[] = [
   { value: "lte", label: "Less or equal", icon: "≤" },
 ];
 
+const DEFAULT_FILTER: ComparisonFilterState = {
+  operator: "eq",
+  value: "",
+};
+
 export function ComparisonFilter<TData, TValue>({
   column,
   densityH,
 }: BaseFilterProps<TData, TValue>) {
-  const filterValue = useMemo(
-    () =>
-      (column.getFilterValue() as ComparisonFilterState) || {
-        operator: "eq",
-        value: "",
-      },
-    [column],
-  );
+  const filterValue =
+    (column.getFilterValue() as ComparisonFilterState) || DEFAULT_FILTER;
 
-  const setOperator = useCallback(
-    (op: FilterOperator) => {
-      column.setFilterValue({ ...filterValue, operator: op });
-    },
-    [column, filterValue],
-  );
+  const setOperator = (op: FilterOperator) => {
+    column.setFilterValue((old: ComparisonFilterState | undefined) => ({
+      ...(old || DEFAULT_FILTER),
+      operator: op,
+    }));
+  };
 
-  const setValue = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      column.setFilterValue({ ...filterValue, value: e.target.value });
-    },
-    [column, filterValue],
-  );
+  const setValue = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+
+    column.setFilterValue((old: ComparisonFilterState | undefined) => {
+      return {
+        ...(old || DEFAULT_FILTER),
+        ...{ value: val },
+      };
+    });
+  };
 
   const currentOp =
     OPERATORS.find((o) => o.value === filterValue.operator) || OPERATORS[0];
 
+  console.log(filterValue);
+
   return (
     <div
       className={cn(
-        "flex w-full rounded border border-input bg-transparent overflow-hidden focus-within:ring-1 focus-within:ring-ring/50",
+        "flex w-full rounded border border-input bg-transparent focus-within:ring-1 focus-within:ring-ring/50",
         densityH,
       )}
     >
       <DropdownMenu>
-        <DropdownMenuTrigger>
-          <Button
-            variant="ghost"
-            className="h-full px-2 rounded-none border-r border-input text-xs hover:bg-muted font-mono"
-          >
-            {currentOp.icon}
-          </Button>
+        <DropdownMenuTrigger
+          variant="ghost"
+          className="h-full px-2 rounded-none border-r border-input text-xs hover:bg-muted font-mono outline-none"
+        >
+          {currentOp.icon}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-48">
           {OPERATORS.map((op) => (
