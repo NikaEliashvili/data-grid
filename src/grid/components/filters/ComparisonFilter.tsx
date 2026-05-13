@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import type { BaseFilterProps } from "../ColumnFilterCell";
-import type { ComparisonFilterState, FilterOperator } from "@/grid/types";
+import type { FilterOperator } from "@/grid/types";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -19,48 +19,60 @@ const OPERATORS: { value: FilterOperator; label: string; icon: string }[] = [
   { value: "lte", label: "Less or equal", icon: "≤" },
 ];
 
-const DEFAULT_FILTER: ComparisonFilterState = {
-  operator: "eq",
-  value: "",
-};
-
 export function ComparisonFilter<TData, TValue>({
   column,
   densityH,
 }: BaseFilterProps<TData, TValue>) {
-  const rawTableValue = column.getFilterValue() as
-    | ComparisonFilterState
-    | undefined;
-  const [prevRawTableValue, setPrevRawTableValue] = useState(rawTableValue);
-  const tableValue =
-    (column.getFilterValue() as ComparisonFilterState) || DEFAULT_FILTER;
+  // 1. Extract the raw state from TanStack
+  const rawFilter = column.getFilterValue();
 
-  // Local state
-  const [operator, setOperator] = useState<FilterOperator>(tableValue.operator);
-  const [value, setValue] = useState(tableValue.value);
+  // Safety net: Just in case an array is still stuck in your state from the previous crash
+  const filterObj = Array.isArray(rawFilter) ? rawFilter[0] : rawFilter;
 
-  // Only debounce the typed value
+  // 2. Extract strictly primitive strings. This kills the infinite loop.
+  const currentOp = filterObj?.operator ?? "eq";
+  const currentVal = filterObj?.value ?? "";
+
+  // Local state for the UI
+  const [operator, setOperator] = useState<FilterOperator>(currentOp);
+  const [value, setValue] = useState<string | number>(currentVal);
+
   const debouncedValue = useDebounce(value, 300);
 
-  if (rawTableValue !== prevRawTableValue) {
-    setPrevRawTableValue(rawTableValue);
-    if (!rawTableValue) {
+  // Sync external filter clears from TanStack down to our local state
+  const [prevTableVal, setPrevTableVal] = useState(currentVal);
+  const [prevTableOp, setPrevTableOp] = useState(currentOp);
+
+  if (currentVal !== prevTableVal || currentOp !== prevTableOp) {
+    setPrevTableVal(currentVal);
+    setPrevTableOp(currentOp);
+
+    // If someone hit a global "Clear All Filters" button
+    if (!filterObj) {
       setOperator("eq");
       setValue("");
     }
   }
 
-  // Push updates
+  // Push local state up to TanStack Table safely
   useEffect(() => {
-    if (
-      debouncedValue !== tableValue.value ||
-      operator !== tableValue.operator
-    ) {
-      column.setFilterValue({ operator, value: debouncedValue });
-    }
-  }, [debouncedValue, operator, column, tableValue]);
+    const isDefault = !debouncedValue && operator === "eq";
 
-  const currentOp = OPERATORS.find((o) => o.value === operator) || OPERATORS[0];
+    if (isDefault) {
+      // Clean up TanStack state if the input is completely empty
+      if (currentVal !== "" || currentOp !== "eq") {
+        column.setFilterValue(undefined);
+      }
+    } else {
+      // Only push an update if our local primitives differ from TanStack's current primitives
+      if (debouncedValue !== currentVal || operator !== currentOp) {
+        column.setFilterValue([{ operator, value: debouncedValue }]);
+      }
+    }
+  }, [debouncedValue, operator, currentVal, currentOp, column]);
+
+  const currentOpIcon =
+    OPERATORS.find((o) => o.value === operator) || OPERATORS[0];
 
   return (
     <div
@@ -74,7 +86,7 @@ export function ComparisonFilter<TData, TValue>({
           variant="ghost"
           className="h-full px-2 rounded-none border-r border-input text-xs hover:bg-muted font-mono outline-none"
         >
-          {currentOp.icon}
+          {currentOpIcon.icon}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-48">
           {OPERATORS.map((op) => (

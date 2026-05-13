@@ -1,23 +1,25 @@
 import { useState, useEffect, useRef } from "react";
+import type { SearchableKeys, WorkerFilterDef } from "../engine/types";
 
 export function useWorkerSearch<TData>(
   initialData: TData[],
-  searchTerm: string,
-  keys: string[],
+  globalFilter: string,
+  columnFilters: WorkerFilterDef[],
+  keys: SearchableKeys<TData>[],
 ) {
   const [filteredData, setFilteredData] = useState<TData[]>(initialData);
   const [isSearching, setIsSearching] = useState(false);
 
   const workerRef = useRef<Worker | null>(null);
 
-  // init worker once
+  // Initialize Worker
   useEffect(() => {
     workerRef.current = new Worker(
       new URL("../engine/search.worker.ts", import.meta.url),
       { type: "module" },
     );
 
-    workerRef.current.onmessage = (event) => {
+    workerRef.current.onmessage = (event: MessageEvent<TData[]>) => {
       setFilteredData(event.data);
       setIsSearching(false);
     };
@@ -27,10 +29,9 @@ export function useWorkerSearch<TData>(
     };
   }, []);
 
-  // send dataset once (or when it actually changes)
+  // Send initial dataset
   useEffect(() => {
     if (!workerRef.current) return;
-
     workerRef.current.postMessage({
       type: "init",
       data: initialData,
@@ -38,17 +39,17 @@ export function useWorkerSearch<TData>(
     });
   }, [initialData, keys]);
 
-  // search (debounced)
+  // Dispatch search query whenever filters change
   useEffect(() => {
     if (!workerRef.current) return;
-
     setIsSearching(true);
 
     workerRef.current.postMessage({
-      type: "search",
-      searchTerm: searchTerm,
+      type: "filter",
+      globalFilter,
+      columnFilters,
     });
-  }, [searchTerm]);
+  }, [globalFilter, columnFilters]); // Depend on BOTH global and column filters
 
   return { filteredData, isSearching };
 }

@@ -37,11 +37,12 @@ export const useGridStore = create<GridStore>()(
         pagination: { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE },
       }),
 
-    setColumnFilters: (filters) =>
-      set({
+    setColumnFilters: (filters) => {
+      return set({
         columnFilters: filters,
         pagination: { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE },
-      }),
+      });
+    },
 
     setSorting: (sorting) => set({ sorting }),
 

@@ -17,7 +17,7 @@ import {
   type ColumnOrderState,
 } from "@tanstack/react-table";
 import { useGridStore } from "@/grid/store/gridStore";
-import { filterFns } from "@/grid/engine/filterFunctions";
+// import { filterFns } from "@/grid/engine/filterFunctions";
 import type { GridColumnDef } from "@/grid/types";
 
 interface UseGridTableOptions<TData> {
@@ -64,19 +64,12 @@ export function useGridTable<TData>({
       expanded: expanded,
       columnOrder: columnOrder,
     },
+    manualFiltering: true,
     getRowId: (row) => (row as { id: string }).id,
     enableRowSelection: true,
     enableMultiRowSelection: true,
     enableColumnResizing: true,
     columnResizeMode: "onChange",
-    filterFns: {
-      globalFuzzy: filterFns.globalFuzzy,
-      numberRange: filterFns.numberRange,
-      exactMatch: filterFns.exactMatch,
-      multiSelect: filterFns.multiSelect,
-      contains: filterFns.contains,
-      comparison: filterFns.comparison,
-    },
     onGlobalFilterChange: (updater) => {
       const val =
         typeof updater === "function" ? updater(globalFilter) : updater;

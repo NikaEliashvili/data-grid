@@ -7,7 +7,6 @@ import { ChangeCell } from "./ChangeCell";
 import { BarCell } from "./BarCell";
 import { SignalBadge } from "./SignalBadge";
 import { StatusBadge } from "./StatusBadge";
-import { filterFns } from "../engine/filterFunctions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 
@@ -84,7 +83,6 @@ export const STOCK_COLUMNS: GridColumnDef<StockRow>[] = [
     accessorKey: "sector",
     header: "Sector",
     size: 160,
-    filterFn: filterFns.multiSelect,
     meta: {
       type: "string",
       filterable: true,
@@ -154,7 +152,6 @@ export const STOCK_COLUMNS: GridColumnDef<StockRow>[] = [
     id: "change",
     accessorFn: (row) => row.change,
     header: "Change",
-    filterFn: filterFns.comparison,
     size: 170,
     meta: {
       type: "number",

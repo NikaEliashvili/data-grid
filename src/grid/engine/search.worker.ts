@@ -1,74 +1,134 @@
-// engine/search.worker.ts
 import type {
   WorkerMessage,
   SearchableKeys,
   IndexedRow,
-  ColumnFilterDef,
+  WorkerFilterDef,
 } from "./types";
 
 function createWorkerState<T>() {
   let dataset: IndexedRow<T>[] = [];
-  const MAX_RESULTS = 1000;
 
   function buildIndex(data: T[], keys: SearchableKeys<T>[]): IndexedRow<T>[] {
-    return data.map((row) => ({
-      raw: row,
-      searchText: keys
-        .map((key) => {
-          const value = row[key];
-          return value === null || value === undefined ? "" : String(value);
-        })
-        .join(" ")
-        .toLowerCase(),
-    }));
+    return data.map((row) => {
+      let searchString = "";
+      for (let i = 0; i < keys.length; i++) {
+        const val = row[keys[i] as keyof T];
+        if (val !== null && val !== undefined) {
+          searchString += String(val).toLowerCase() + " ";
+        }
+      }
+      return { raw: row, searchText: searchString };
+    });
   }
 
-  // Strictly typed filter evaluator
-  function evaluateColumnFilter(
-    val: T[keyof T],
-    filter: ColumnFilterDef<T>,
+  function evaluateFilter(
+    cellValue: T[keyof T],
+    filter: WorkerFilterDef,
   ): boolean {
+    const rawVal = cellValue;
+
     switch (filter.type) {
-      case "numberRange": {
-        if (typeof val !== "number") return false;
-        const [min, max] = filter.value;
-        if (min !== "" && val < min) return false;
-        if (max !== "" && val > max) return false;
-        return true;
-      }
-      case "exactMatch": {
-        return String(val ?? "") === filter.value;
-      }
-      case "multiSelect": {
-        if (!filter.value.length) return true;
-        return filter.value.includes(String(val ?? ""));
-      }
-      case "contains": {
+      case "text": {
         if (!filter.value) return true;
-        return String(val ?? "")
+        // CRITICAL FIX: If an object accidentally routes here, ignore it instead of crashing!
+        if (typeof filter.value !== "string") return true;
+
+        return String(rawVal ?? "")
           .toLowerCase()
           .includes(filter.value.toLowerCase());
       }
+
+      case "select": {
+        if (!filter.value) return true;
+
+        return String(rawVal ?? "") === String(filter.value);
+      }
+
+      case "multiselect": {
+        if (
+          !filter.value ||
+          !Array.isArray(filter.value) ||
+          filter.value.length === 0
+        )
+          return true;
+
+        if (Array.isArray(rawVal)) {
+          return rawVal.some((item) => filter.value.includes(String(item)));
+        }
+        return filter.value.some((fItem) =>
+          String(rawVal ?? "").includes(fItem),
+        );
+      }
+
+      case "range": {
+        // Prevent null/empty strings from being evaluated as 0
+        if (rawVal === null || rawVal === "" || rawVal === undefined)
+          return false;
+
+        const numVal = Number(rawVal);
+        if (isNaN(numVal)) return false;
+
+        if (!Array.isArray(filter.value)) return true; // Type guard
+        const [min, max] = filter.value;
+
+        if (min !== "" && numVal < Number(min)) return false;
+        if (max !== "" && numVal > Number(max)) return false;
+        return true;
+      }
+
       case "comparison": {
-        if (!filter.value || !filter.value.value) return true;
-        const { operator, value } = filter.value;
-        // Safe string/number comparison based on your logic
-        if (operator === "eq") return val == value;
-        if (operator === "neq") return val != value;
-        if (operator === "gt") return Number(val) > Number(value);
-        if (operator === "gte") return Number(val) >= Number(value);
-        if (operator === "lt") return Number(val) < Number(value);
-        if (operator === "lte") return Number(val) <= Number(value);
-        return true;
+        if (!filter.value || typeof filter.value !== "object") return true;
+
+        const { operator, value } = filter.value[0];
+
+        if (value === undefined || value === null || value === "") return true;
+
+        const rowNum = Number(rawVal);
+        const filterNum = Number(value);
+
+        // Strict safety: don't let empty strings become 0
+        const isNumeric =
+          rawVal !== null &&
+          rawVal !== "" &&
+          !isNaN(rowNum) &&
+          !isNaN(filterNum);
+
+        const finalRow = isNumeric
+          ? rowNum
+          : String(rawVal ?? "").toLowerCase();
+        const finalFilter = isNumeric ? filterNum : String(value).toLowerCase();
+
+        switch (operator) {
+          case "eq":
+            return finalRow === finalFilter;
+          case "neq":
+            return finalRow != finalFilter;
+          case "gt":
+            return finalRow > finalFilter;
+          case "gte":
+            return finalRow >= finalFilter;
+          case "lt":
+            return finalRow < finalFilter;
+          case "lte":
+            return finalRow <= finalFilter;
+          default:
+            return true;
+        }
       }
-      case "globalFuzzy": {
-        // Handled via the global string index below for performance
-        return true;
+
+      case "date": {
+        if (!filter.value) return true;
+        const rowDateStr = String(rawVal ?? "").split("T")[0];
+        return rowDateStr === filter.value;
       }
-      // Exhaustiveness check ensures we never miss a type
-      default: {
-        return true;
+
+      case "checkbox": {
+        if (filter.value === "indeterminate") return true;
+        return Boolean(rawVal) === filter.value;
       }
+
+      default:
+        return true;
     }
   }
 
@@ -78,7 +138,7 @@ function createWorkerState<T>() {
 
       if (msg.type === "init") {
         dataset = buildIndex(msg.data, msg.keys);
-        self.postMessage(dataset.slice(0, MAX_RESULTS).map((r) => r.raw));
+        self.postMessage(dataset.map((r) => r.raw));
         return;
       }
 
@@ -87,17 +147,15 @@ function createWorkerState<T>() {
         const lowerGlobal = globalFilter.toLowerCase();
         const result: T[] = [];
 
-        // Loop execution is highly optimized
         for (let i = 0; i < dataset.length; i++) {
           const indexedRow = dataset[i];
           let passesAll = true;
 
-          // 1. Column Filters Evaluation
           for (let j = 0; j < columnFilters.length; j++) {
             const filter = columnFilters[j];
-            const val = indexedRow.raw[filter.id];
+            const cellValue = indexedRow.raw[filter.id as keyof T];
 
-            if (!evaluateColumnFilter(val, filter)) {
+            if (!evaluateFilter(cellValue, filter)) {
               passesAll = false;
               break;
             }
@@ -105,13 +163,11 @@ function createWorkerState<T>() {
 
           if (!passesAll) continue;
 
-          // 2. Global Filter Evaluation (using pre-indexed string)
           if (lowerGlobal && !indexedRow.searchText.includes(lowerGlobal)) {
             continue;
           }
 
           result.push(indexedRow.raw);
-          if (result.length >= MAX_RESULTS) break; // Prevent main thread serialization lag
         }
 
         self.postMessage(result);
@@ -120,7 +176,6 @@ function createWorkerState<T>() {
   };
 }
 
-// Instantiate with actual type
 type AppRow = import("@/grid/types").StockRow;
 const worker = createWorkerState<AppRow>();
 
