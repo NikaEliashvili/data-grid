@@ -16,5 +16,4 @@ export const fmt = {
       maximumFractionDigits: 2,
     }).format(v),
   percent: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`,
-  date: (v: string) => new Date(v).toLocaleString(),
 };

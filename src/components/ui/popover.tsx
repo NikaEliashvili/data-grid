@@ -3,6 +3,8 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
+import { Button } from "./button";
+import { ChevronDown } from "lucide-react";
 
 const PopoverContext = React.createContext<{
   isOpen: boolean;
@@ -22,26 +24,60 @@ export function Popover({ children }: { children: React.ReactNode }) {
 
 export const PopoverTrigger = React.forwardRef<
   HTMLButtonElement,
-  React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }
->(({ className, onClick, ...props }, ref) => {
-  const { isOpen, setIsOpen, triggerRef } = React.useContext(PopoverContext)!;
-  return (
-    <button
-      ref={(node) => {
-        triggerRef.current = node;
-        if (typeof ref === "function") ref(node);
-        else if (ref) ref.current = node;
-      }}
-      type="button"
-      onClick={(e) => {
-        setIsOpen(!isOpen);
-        onClick?.(e);
-      }}
-      className={cn("focus:outline-none", className)}
-      {...props}
-    />
-  );
-});
+  React.ButtonHTMLAttributes<HTMLButtonElement> & { hasArrow?: boolean }
+>(
+  (
+    { className, onClick = () => {}, children, hasArrow = false, ...props },
+    ref,
+  ) => {
+    const { isOpen, setIsOpen, triggerRef } = React.useContext(PopoverContext)!;
+    return (
+      <Button
+        ref={(node) => {
+          triggerRef.current = node;
+          if (typeof ref === "function") ref(node);
+          else if (ref) ref.current = node;
+        }}
+        variant="outline"
+        aria-expanded={isOpen}
+        type="button"
+        onClick={(e) => {
+          setIsOpen(!isOpen);
+          onClick?.(e);
+        }}
+        className={cn(
+          "w-full justify-between rounded px-2 font-normal",
+          className,
+        )}
+        {...props}
+      >
+        {children}
+        {hasArrow && (
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 opacity-50 transition-transform duration-200",
+              isOpen && "rotate-180",
+            )}
+          />
+        )}
+      </Button>
+      // <button
+      //   ref={(node) => {
+      //     triggerRef.current = node;
+      //     if (typeof ref === "function") ref(node);
+      //     else if (ref) ref.current = node;
+      //   }}
+      //   type="button"
+      //   onClick={(e) => {
+      //     setIsOpen(!isOpen);
+      //     onClick?.(e);
+      //   }}
+      //   className={cn("focus:outline-none", className)}
+      //   {...props}
+      // />
+    );
+  },
+);
 
 export const PopoverContent = React.forwardRef<
   HTMLDivElement,

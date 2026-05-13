@@ -16,7 +16,7 @@ export function SelectFilter<TData, TValue>({
   const filterValue = (column.getFilterValue() as string) ?? "all";
 
   return (
-    <div className="w-full px-1">
+    <div className="w-full">
       <Select
         value={filterValue}
         onValueChange={(value) => {
@@ -25,7 +25,7 @@ export function SelectFilter<TData, TValue>({
       >
         <SelectTrigger
           className={cn(
-            "w-full rounded border border-input bg-transparent px-2 outline-none focus:ring-1 focus:ring-ring/50 transition-colors ",
+            "w-full rounded border border-input bg-transparent px-2 outline-none focus:ring-1 focus:ring-ring/50 transition-colors py-0",
             "h-auto py-0",
             densityH,
           )}

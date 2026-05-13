@@ -39,7 +39,7 @@ export function GridHeaderCell<TData, TValue>({
         column.getIsResizing() && "pointer-events-none",
       )}
       style={{ width: header.getSize(), flexBasis: header.getSize() }}
-      draggable={!header.isPlaceholder && column.id !== "select"}
+      draggable={!header.isPlaceholder && column.id !== "checkbox"}
       onDragStart={() => onDragStart(column.id)}
       onDragOver={(e) => {
         e.preventDefault();
@@ -58,7 +58,7 @@ export function GridHeaderCell<TData, TValue>({
         )}
         onClick={canSort ? column.getToggleSortingHandler() : undefined}
       >
-        {column.id !== "select" && (
+        {column.id !== "checkbox" && (
           <GripVertical className="size-3 shrink-0 text-muted-foreground/40 cursor-grab active:cursor-grabbing mr-0.5" />
         )}
 

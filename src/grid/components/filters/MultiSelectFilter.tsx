@@ -1,8 +1,8 @@
+import { useState, useEffect, useMemo } from "react";
 import type { BaseFilterProps } from "../ColumnFilterCell";
 import { cn } from "@/lib/utils";
-import { Check, PlusCircle } from "lucide-react";
+import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -17,47 +17,71 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
+import { useDebounce } from "@/grid/hooks/useDebounce";
 
 export function MultiSelectFilter<TData, TValue>({
   column,
   densityH,
   meta,
 }: BaseFilterProps<TData, TValue>) {
+  const rawTableValue = column.getFilterValue() as string[] | undefined;
+  const [prevRawTableValue, setPrevRawTableValue] = useState(rawTableValue);
   const options = meta.filterOptions || [];
-  const selectedValues = new Set((column.getFilterValue() as string[]) || []);
+  const tableValue = useMemo(
+    () => (column.getFilterValue() as string[]) || [],
+    [column],
+  );
+
+  // Local state for checkboxes
+  const [selectedValues, setSelectedValues] = useState<Set<string>>(
+    new Set(tableValue),
+  );
+
+  // Debounce the entire Set
+  const debouncedSelected = useDebounce(selectedValues, 300);
+
+  if (rawTableValue !== prevRawTableValue) {
+    setPrevRawTableValue(rawTableValue);
+    if (!rawTableValue) {
+      setSelectedValues(new Set());
+    }
+  }
+
+  // Push to table
+  useEffect(() => {
+    const arrayValues = Array.from(debouncedSelected);
+    // Deep comparison skip
+    if (JSON.stringify(arrayValues) !== JSON.stringify(tableValue)) {
+      column.setFilterValue(arrayValues.length ? arrayValues : undefined);
+    }
+  }, [debouncedSelected, column, tableValue]);
 
   const title = column.columnDef.header as string | undefined;
 
   return (
-    <div
-      className={cn("w-full px-1 flex items-center justify-center", densityH)}
-    >
+    <div className={cn("w-full flex items-center justify-center", densityH)}>
       <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            className={cn(
-              "h-full w-full justify-start text-xs font-normal border-dashed border-input bg-transparent hover:bg-muted",
-              densityH,
-            )}
-          >
-            <PlusCircle className="mr-2 h-3.5 w-3.5 opacity-50" />
-            <span className="truncate flex-1 text-left text-muted-foreground">
-              Select...
-            </span>
-            {selectedValues?.size > 0 && (
-              <>
-                <div className="ml-2 border-l border-border h-3 w-px shrink-0" />
-                <Badge
-                  variant="secondary"
-                  className="ml-2 rounded-sm px-1 font-normal text-[10px] shrink-0"
-                >
-                  {selectedValues.size}
-                </Badge>
-              </>
-            )}
-          </Button>
+        <PopoverTrigger
+          className={cn(
+            "h-full w-full justify-start text-xs font-normal bg-transparent hover:bg-muted",
+            densityH,
+          )}
+          hasArrow
+        >
+          <span className="truncate flex-1 text-left text-muted-foreground">
+            Select...
+          </span>
+          {selectedValues?.size > 0 && (
+            <>
+              <div className="ml-2 border-l border-border h-3 w-px shrink-0" />
+              <Badge
+                variant="secondary"
+                className="mx-1 rounded-full aspect-square size-4 flex items-center justify-center px-1 font-normal text-[10px] shrink-0"
+              >
+                {selectedValues.size}
+              </Badge>
+            </>
+          )}
         </PopoverTrigger>
         <PopoverContent className="w-50 p-0" align="start">
           <Command>
@@ -68,26 +92,22 @@ export function MultiSelectFilter<TData, TValue>({
               <CommandEmpty>No results found.</CommandEmpty>
               <CommandGroup>
                 {options.map((option) => {
-                  const isSelected = selectedValues.has(
-                    option.value.toString(),
-                  );
+                  const valString = option.value.toString();
+                  const isSelected = selectedValues.has(valString);
+
                   return (
                     <CommandItem
                       key={option.value}
-                      value={option.value.toString()}
+                      value={valString}
                       onSelect={() => {
-                        const newSelectedValues = new Set(selectedValues);
-                        const valString = option.value.toString();
+                        // Mutate local state instantly
+                        const newSet = new Set(selectedValues);
                         if (isSelected) {
-                          newSelectedValues.delete(valString);
+                          newSet.delete(valString);
                         } else {
-                          newSelectedValues.add(valString);
+                          newSet.add(valString);
                         }
-
-                        const filterValues = Array.from(newSelectedValues);
-                        column.setFilterValue(
-                          filterValues.length ? filterValues : undefined,
-                        );
+                        setSelectedValues(newSet);
                       }}
                     >
                       <div
@@ -110,8 +130,8 @@ export function MultiSelectFilter<TData, TValue>({
                   <CommandSeparator />
                   <CommandGroup>
                     <CommandItem
-                      value={column.getFilterValue.toString()}
-                      onSelect={() => column.setFilterValue(undefined)}
+                      value="clear"
+                      onSelect={() => setSelectedValues(new Set())}
                       className="justify-center text-center text-xs"
                     >
                       Clear filters

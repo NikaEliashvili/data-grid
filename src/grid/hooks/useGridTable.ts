@@ -85,12 +85,6 @@ export function useGridTable<TData>({
     onColumnFiltersChange: (updater) => {
       const val =
         typeof updater === "function" ? updater(columnFilters) : updater;
-      console.log({
-        type: typeof updater === "function",
-        columnFilters,
-        updater:
-          typeof updater === "function" ? updater?.(columnFilters) : updater,
-      });
 
       setColumnFilters(val as ColumnFiltersState);
     },

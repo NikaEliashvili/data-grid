@@ -8,15 +8,44 @@ import { BarCell } from "./BarCell";
 import { SignalBadge } from "./SignalBadge";
 import { StatusBadge } from "./StatusBadge";
 import { filterFns } from "../engine/filterFunctions";
+import { Checkbox } from "@/components/ui/checkbox";
+import { format } from "date-fns";
+
+// If U need select checkbox then u have to add column with id = "checkbox"
+// Example:
+// {
+//   id: "checkbox",
+//   enableSorting: false,
+//   enableHiding: false,
+//   size: 40,
+//   header: () => null,
+//   cell: () => null,
+// }
 
 export const STOCK_COLUMNS: GridColumnDef<StockRow>[] = [
   {
-    id: "select",
+    id: "isActive",
+    accessorKey: "isActive",
     enableSorting: false,
-    enableHiding: false,
-    size: 40,
-    header: () => null,
-    cell: () => null,
+    enableHiding: true,
+    size: 100,
+    header: "Status",
+    meta: {
+      type: "boolean",
+      filterable: true,
+      filterType: "checkbox",
+      groupable: true,
+      minWidth: 100,
+    },
+    cell: ({ getValue }) => (
+      <div className="font-mono font-semibold text-sm tracking-wide flex items-center justify-center w-full ">
+        {getValue<string>() ? (
+          <Checkbox checked={true} readOnly />
+        ) : (
+          <Checkbox checked={false} readOnly />
+        )}
+      </div>
+    ),
   },
   {
     accessorKey: "symbol",
@@ -55,10 +84,11 @@ export const STOCK_COLUMNS: GridColumnDef<StockRow>[] = [
     accessorKey: "sector",
     header: "Sector",
     size: 160,
+    filterFn: filterFns.multiSelect,
     meta: {
       type: "string",
       filterable: true,
-      filterType: "select",
+      filterType: "multiselect",
       groupable: true,
       minWidth: 100,
       filterOptions: [
@@ -567,10 +597,10 @@ export const STOCK_COLUMNS: GridColumnDef<StockRow>[] = [
     accessorKey: "lastUpdated",
     header: "Updated",
     size: 150,
-    meta: { type: "date", filterable: false, minWidth: 120 },
+    meta: { type: "date", filterable: true, filterType: "date", minWidth: 120 },
     cell: ({ getValue }) => (
       <span className="text-xs text-muted-foreground">
-        {fmt.date(getValue<string>())}
+        {format(new Date(getValue<string>()), "dd/MM/yyyy HH:mm:ss")}
       </span>
     ),
   },

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import type { BaseFilterProps } from "../ColumnFilterCell";
 import type { ComparisonFilterState, FilterOperator } from "@/grid/types";
 import { cn } from "@/lib/utils";
@@ -7,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useDebounce } from "@/grid/hooks/useDebounce";
 
 const OPERATORS: { value: FilterOperator; label: string; icon: string }[] = [
   { value: "eq", label: "Equals", icon: "=" },
@@ -26,31 +28,39 @@ export function ComparisonFilter<TData, TValue>({
   column,
   densityH,
 }: BaseFilterProps<TData, TValue>) {
-  const filterValue =
+  const rawTableValue = column.getFilterValue() as
+    | ComparisonFilterState
+    | undefined;
+  const [prevRawTableValue, setPrevRawTableValue] = useState(rawTableValue);
+  const tableValue =
     (column.getFilterValue() as ComparisonFilterState) || DEFAULT_FILTER;
 
-  const setOperator = (op: FilterOperator) => {
-    column.setFilterValue((old: ComparisonFilterState | undefined) => ({
-      ...(old || DEFAULT_FILTER),
-      operator: op,
-    }));
-  };
+  // Local state
+  const [operator, setOperator] = useState<FilterOperator>(tableValue.operator);
+  const [value, setValue] = useState(tableValue.value);
 
-  const setValue = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
+  // Only debounce the typed value
+  const debouncedValue = useDebounce(value, 300);
 
-    column.setFilterValue((old: ComparisonFilterState | undefined) => {
-      return {
-        ...(old || DEFAULT_FILTER),
-        ...{ value: val },
-      };
-    });
-  };
+  if (rawTableValue !== prevRawTableValue) {
+    setPrevRawTableValue(rawTableValue);
+    if (!rawTableValue) {
+      setOperator("eq");
+      setValue("");
+    }
+  }
 
-  const currentOp =
-    OPERATORS.find((o) => o.value === filterValue.operator) || OPERATORS[0];
+  // Push updates
+  useEffect(() => {
+    if (
+      debouncedValue !== tableValue.value ||
+      operator !== tableValue.operator
+    ) {
+      column.setFilterValue({ operator, value: debouncedValue });
+    }
+  }, [debouncedValue, operator, column, tableValue]);
 
-  console.log(filterValue);
+  const currentOp = OPERATORS.find((o) => o.value === operator) || OPERATORS[0];
 
   return (
     <div
@@ -83,8 +93,8 @@ export function ComparisonFilter<TData, TValue>({
       <input
         type="text"
         placeholder="Filter..."
-        value={filterValue.value}
-        onChange={setValue}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
         className="flex-1 bg-transparent px-2 outline-none min-w-0 text-xs"
       />
     </div>

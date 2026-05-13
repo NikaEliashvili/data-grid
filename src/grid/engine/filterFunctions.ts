@@ -5,7 +5,7 @@ import { rankItem, type RankingInfo } from "@tanstack/match-sorter-utils";
 declare module "@tanstack/react-table" {
   interface FilterMeta {
     itemRank: RankingInfo;
-    comparison: FilterFn<unknown>;
+    comparison?: FilterFn<unknown>;
   }
 }
 
@@ -20,7 +20,9 @@ export const globalFuzzyFilter: FilterFn<StockRow> = (
   const itemRank = rankItem(row.getValue(columnId), value);
 
   // ვინახავთ მეტამონაცემებს, რომ მერე სორტირებისას გამოვიყენოთ
-  addMeta({ itemRank });
+  addMeta({
+    itemRank,
+  });
 
   return itemRank.passed;
 };
@@ -63,10 +65,25 @@ export const multiSelectFilter: FilterFn<StockRow> = (
   columnId,
   filterValue: string[],
 ) => {
+  // 1. If nothing is selected in the dropdown, let all rows pass
   if (!filterValue?.length) return true;
-  const val = String(row.getValue(columnId) ?? "");
-  return filterValue.includes(val);
+
+  const rawValue = row.getValue(columnId);
+
+  // 2. Scenario A: If your cell data is an Array (e.g., tags: ["value_1", "value_2"])
+  if (Array.isArray(rawValue)) {
+    // OR Logic: Return true if AT LEAST ONE selected filter is found in the cell's array
+    return rawValue.some((item) => filterValue.includes(String(item)));
+  }
+
+  // 3. Scenario B: If your cell data is a primitive (string or number)
+  const stringValue = String(rawValue ?? "");
+
+  // OR Logic: Return true if the cell's string contains AT LEAST ONE of the selected filters.
+  // We use .some() so it stops checking and returns true as soon as it finds a single match.
+  return filterValue.some((filterItem) => stringValue.includes(filterItem));
 };
+
 multiSelectFilter.autoRemove = (val: unknown) =>
   !val || (val as string[]).length === 0;
 
@@ -83,30 +100,56 @@ export const containsFilter: FilterFn<StockRow> = (
 containsFilter.autoRemove = (val: unknown) =>
   !val || (val as string).length === 0;
 
-export const comparison: FilterFn<StockRow> = (
+export const comparisonFilter: FilterFn<StockRow> = (
   row,
   columnId,
   filterValue: ComparisonFilterState,
 ) => {
-  const rowValue = row.getValue(columnId) as number | string;
-  const { operator, value } = filterValue;
-  console.log("Filter...");
+  const rowValue = row.getValue(columnId);
+  const { operator, value } = filterValue || {};
+  console.log({ rowValue, filterValue });
 
-  if (!value) return true; // Don't filter if input is empty
+  // 1. Don't filter if input is empty (let all rows pass)
+  if (value === undefined || value === null || value === "") return true;
 
-  // Do the actual comparison
-  if (operator === "eq") return rowValue == value;
-  if (operator === "neq") return rowValue != value;
-  if (operator === "gt") return rowValue > value;
-  if (operator === "gte") return rowValue >= value;
-  if (operator === "lt") return rowValue < value;
-  if (operator === "lte") return rowValue <= value;
+  // 2. Parse to numbers to prevent lexicographical bugs (e.g. "9" > "100")
+  const numRowValue = Number(rowValue);
+  const numFilterValue = Number(value);
 
-  return true;
+  // Check if both values are valid numbers
+  const isNumeric = !isNaN(numRowValue) && !isNaN(numFilterValue);
+
+  // If numeric, compare as numbers. If text, compare as lowercase strings.
+  const finalRowVal = isNumeric ? numRowValue : String(rowValue).toLowerCase();
+  const finalFilterVal = isNumeric
+    ? numFilterValue
+    : String(value).toLowerCase();
+
+  // 3. Do the actual comparison
+  switch (operator) {
+    case "eq":
+      return finalRowVal == finalFilterVal;
+    case "neq":
+      return finalRowVal != finalFilterVal;
+    case "gt":
+      return finalRowVal > finalFilterVal;
+    case "gte":
+      return finalRowVal >= finalFilterVal;
+    case "lt":
+      return finalRowVal < finalFilterVal;
+    case "lte":
+      return finalRowVal <= finalFilterVal;
+    default:
+      return true;
+  }
 };
 
-comparison.autoRemove = (val: ComparisonFilterState) => {
-  return !val || !val.value || val.value.toString().trim() === "";
+// FIX: Prevent TanStack from destroying the operator state.
+// We only auto-remove the filter object entirely if the value is empty
+// AND the user hasn't selected a custom operator.
+comparisonFilter.autoRemove = (val: ComparisonFilterState) => {
+  if (!val) return true;
+  return (val.value === "" || val.value == null) && val.operator === "eq";
 };
 
 // ─── Filter Function Registry ─────────────────────────────────────────────────
@@ -116,7 +159,7 @@ export const filterFns = {
   exactMatch: exactMatchFilter,
   multiSelect: multiSelectFilter,
   contains: containsFilter,
-  comparison,
+  comparison: comparisonFilter,
 } as const;
 
 export type FilterFnName = keyof typeof filterFns;

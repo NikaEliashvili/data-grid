@@ -172,6 +172,8 @@ export function generateMockData(count: number = 5000): StockRow[] {
     const prefix = pickFrom(COMPANY_PREFIXES, seed + 19);
     const suffix = pickFrom(COMPANY_SUFFIXES, seed + 20);
 
+    const isActive = i % 5 == 0;
+
     rows.push({
       id: `row-${i}`,
       symbol,
@@ -205,6 +207,7 @@ export function generateMockData(count: number = 5000): StockRow[] {
       ).toISOString(),
       status: pickFrom(STATUSES, seed + 23),
       signal: pickFrom(SIGNALS, seed + 24),
+      isActive: isActive,
     });
   }
 

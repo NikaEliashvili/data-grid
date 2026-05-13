@@ -194,6 +194,7 @@ export interface StockRow {
   lastUpdated: string;
   status: "active" | "halted" | "delisted";
   signal: "buy" | "hold" | "sell" | "neutral";
+  isActive: boolean;
 }
 
 // ─── Drag & Drop ──────────────────────────────────────────────────────────────

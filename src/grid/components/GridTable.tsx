@@ -40,7 +40,7 @@ export function GridTable<TData>({ table, onRowClick }: GridTableProps<TData>) {
   const filteredHeaders = useMemo(() => {
     return headerGroups.map((group) => ({
       ...group,
-      headers: group.headers.filter((h) => h.column.id !== "select"),
+      headers: group.headers.filter((h) => h.column.id !== "checkbox"),
     }));
   }, [headerGroups]);
 
@@ -54,6 +54,12 @@ export function GridTable<TData>({ table, onRowClick }: GridTableProps<TData>) {
     estimateSize,
     overscan: 10,
   });
+
+  const hasCheckbox = useMemo(() => {
+    return headerGroups.some((headerGroup) => {
+      return headerGroup.headers.some((h) => h.column.id === "checkbox");
+    });
+  }, [headerGroups]);
 
   useEffect(() => {
     rowVirtualizer.measure();
@@ -78,18 +84,22 @@ export function GridTable<TData>({ table, onRowClick }: GridTableProps<TData>) {
               className="flex border-b border-border w-full"
               role="row"
             >
-              <div
-                className="bg-muted/50 border-r border-border px-2 py-2 flex items-center justify-center shrink-0"
-                style={{ width: 40, flexBasis: 40 }}
-                role="columnheader"
-              >
-                <Checkbox
-                  checked={isAllSelected}
-                  onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
-                  aria-label="Select all"
-                  className="size-3.5 rounded"
-                />
-              </div>
+              {hasCheckbox && (
+                <div
+                  className="bg-muted/50 border-r border-border px-2 py-2 flex items-center justify-center shrink-0"
+                  style={{ width: 40, flexBasis: 40 }}
+                  role="columnheader"
+                >
+                  <Checkbox
+                    checked={isAllSelected}
+                    onCheckedChange={(v) =>
+                      table.toggleAllPageRowsSelected(!!v)
+                    }
+                    aria-label="Select all"
+                    className="size-3.5 rounded"
+                  />
+                </div>
+              )}
               {headerGroup.headers.map((header) => (
                 <GridHeaderCell
                   key={header.id}
@@ -110,15 +120,17 @@ export function GridTable<TData>({ table, onRowClick }: GridTableProps<TData>) {
             className="flex border-b-2 border-border bg-muted/20 w-full"
             role="row"
           >
-            <div
-              className="bg-muted/20 border-r border-border shrink-0"
-              style={{ width: 40, flexBasis: 40 }}
-              role="columnheader"
-            />
+            {hasCheckbox && (
+              <div
+                className="bg-muted/20 border-r border-border shrink-0"
+                style={{ width: 40, flexBasis: 40 }}
+                role="columnheader"
+              />
+            )}
             {filteredHeaders[0]?.headers.map((header) => (
               <div
                 key={`filter-${header.id}`}
-                className="border-r border-border last:border-r-0 py-1 shrink-0"
+                className="border-r border-border last:border-r-0 py-1 flex items-center justify-center shrink-0 px-1"
                 style={{
                   width: header.getSize(),
                   flexBasis: header.getSize(),

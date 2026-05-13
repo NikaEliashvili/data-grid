@@ -116,7 +116,7 @@ export function GridRowInner<TData>({
     >
       {row.getVisibleCells().map((cell) => {
         const isSelectColumn =
-          cell.column.id === "select" || cell.id.endsWith("_select");
+          cell.column.id === "checkbox" || cell.id.endsWith("_select");
 
         if (isSelectColumn) {
           return (
