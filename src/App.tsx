@@ -3,7 +3,6 @@ import { DataGrid } from "@/grid/components/DataGrid";
 import { MOCK_DATA } from "@/grid/data/mockGenerator";
 import { STOCK_COLUMNS } from "@/grid/data/stockColumns";
 import { ModeToggle } from "@/components/mode-toggle";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ChartBar as BarChart2 } from "lucide-react";
 import type { GridConfig, StockRow } from "@/grid/types";
@@ -28,8 +27,8 @@ export function App() {
       {/* Header */}
       <header className="flex items-center gap-3 px-4 py-3 border-b bg-card shrink-0">
         <div className="flex items-center gap-2">
-          <div className="size-8 rounded-lg bg-primary flex items-center justify-center">
-            <BarChart2 className="size-4 text-primary-foreground" />
+          <div className="size-8 rounded-lg bg-primary flex items-center shrink-0 justify-center">
+            <BarChart2 className="size-4 text-primary-foreground shrink-0" />
           </div>
           <div>
             <h1 className="text-sm font-semibold leading-none">DataGrid Pro</h1>
@@ -42,12 +41,9 @@ export function App() {
         <Separator orientation="vertical" className="h-5" />
 
         <div className="flex items-center gap-1.5">
-          <Badge
-            variant="outline"
-            className="text-xs font-normal text-muted-foreground"
-          >
-            Complex Data Grid built by TanStack Table & Zustand
-          </Badge>
+          <span className="sr-only sm:not-sr-only text-sm text-muted-foreground font-medium">
+            Complex Data Grid built by TanStack Table & Zustand & TailwindCSS
+          </span>
         </div>
 
         <div className="flex-1" />

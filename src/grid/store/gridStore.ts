@@ -24,7 +24,6 @@ const initialState = {
   expanded: {} as ExpandedState,
   columnOrder: [] as string[],
   density: "comfortable" as GridDensity,
-  sidebarOpen: false,
 };
 
 export const useGridStore = create<GridStore>()(
@@ -59,8 +58,6 @@ export const useGridStore = create<GridStore>()(
     setColumnOrder: (order) => set({ columnOrder: order }),
 
     setDensity: (density) => set({ density }),
-
-    toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
 
     resetAll: () => set({ ...initialState }),
   })),

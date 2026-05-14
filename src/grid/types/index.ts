@@ -109,7 +109,6 @@ export interface GridState {
   expanded: ExpandedState;
   columnOrder: string[];
   density: GridDensity;
-  sidebarOpen: boolean;
 }
 
 // ─── Grid Actions ─────────────────────────────────────────────────────────────
@@ -124,7 +123,6 @@ export interface GridActions {
   setExpanded: (expanded: ExpandedState) => void;
   setColumnOrder: (order: string[]) => void;
   setDensity: (density: GridDensity) => void;
-  toggleSidebar: () => void;
   resetAll: () => void;
 }
 

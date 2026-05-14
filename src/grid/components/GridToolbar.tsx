@@ -67,6 +67,13 @@ export const GridDensitySelector = memo(() => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const updateLocalValue = () => {
+      setLocalValue(density);
+    };
+    updateLocalValue();
+  }, [density]);
+
   // Debounce logic
   useEffect(() => {
     const timer = window.setTimeout(() => {

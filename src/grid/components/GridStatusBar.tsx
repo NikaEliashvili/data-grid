@@ -59,7 +59,7 @@ function GridStatusBarInner<TData>({
         </div>
       ))}
       <div className="flex-1" />
-      <span className="opacity-50">DataGrid v1.0 — Fast</span>
+      <span className="opacity-50">DataGrid v1.0</span>
     </div>
   );
 }
