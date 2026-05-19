@@ -215,4 +215,4 @@ export function generateMockData(count: number = 5000): StockRow[] {
 }
 
 // Pre-generate once at module level for performance
-export const MOCK_DATA: StockRow[] = generateMockData(500_000);
+export const MOCK_DATA: StockRow[] = generateMockData(100_000);
