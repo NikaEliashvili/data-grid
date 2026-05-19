@@ -36,7 +36,7 @@ const GridSearch = memo(() => {
 
   return (
     <DebouncedInput
-      debounce={300}
+      debounce={500}
       value={globalFilter}
       onChange={setGlobalFilter}
     />

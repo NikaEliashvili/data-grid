@@ -1,25 +1,12 @@
-import type {
-  WorkerMessage,
-  SearchableKeys,
-  IndexedRow,
-  WorkerFilterDef,
-} from "./types";
+import type { WorkerMessage, WorkerFilterDef } from "./types";
+
+// Extended message type internally to handle queryId
+type IncomingMessage<T> = WorkerMessage<T> & { queryId?: number };
 
 function createWorkerState<T>() {
-  let dataset: IndexedRow<T>[] = [];
-
-  function buildIndex(data: T[], keys: SearchableKeys<T>[]): IndexedRow<T>[] {
-    return data.map((row) => {
-      let searchString = "";
-      for (let i = 0; i < keys.length; i++) {
-        const val = row[keys[i] as keyof T];
-        if (val !== null && val !== undefined) {
-          searchString += String(val).toLowerCase() + " ";
-        }
-      }
-      return { raw: row, searchText: searchString };
-    });
-  }
+  // Parallel arrays drastically reduce memory compared to wrapper objects
+  let rawData: T[] = [];
+  let searchIndex: string[] = [];
 
   function evaluateFilter(
     cellValue: T[keyof T],
@@ -30,20 +17,15 @@ function createWorkerState<T>() {
     switch (filter.type) {
       case "text": {
         if (!filter.value) return true;
-        // CRITICAL FIX: If an object accidentally routes here, ignore it instead of crashing!
         if (typeof filter.value !== "string") return true;
-
         return String(rawVal ?? "")
           .toLowerCase()
           .includes(filter.value.toLowerCase());
       }
-
       case "select": {
         if (!filter.value) return true;
-
         return String(rawVal ?? "") === String(filter.value);
       }
-
       case "multiselect": {
         if (
           !filter.value ||
@@ -51,7 +33,6 @@ function createWorkerState<T>() {
           filter.value.length === 0
         )
           return true;
-
         if (Array.isArray(rawVal)) {
           return rawVal.some((item) => filter.value.includes(String(item)));
         }
@@ -59,34 +40,24 @@ function createWorkerState<T>() {
           String(rawVal ?? "").includes(fItem),
         );
       }
-
       case "range": {
-        // Prevent null/empty strings from being evaluated as 0
         if (rawVal === null || rawVal === "" || rawVal === undefined)
           return false;
-
         const numVal = Number(rawVal);
         if (isNaN(numVal)) return false;
-
-        if (!Array.isArray(filter.value)) return true; // Type guard
+        if (!Array.isArray(filter.value)) return true;
         const [min, max] = filter.value;
-
         if (min !== "" && numVal < Number(min)) return false;
         if (max !== "" && numVal > Number(max)) return false;
         return true;
       }
-
       case "comparison": {
         if (!filter.value || typeof filter.value !== "object") return true;
-
         const { operator, value } = filter.value[0];
-
         if (value === undefined || value === null || value === "") return true;
 
         const rowNum = Number(rawVal);
         const filterNum = Number(value);
-
-        // Strict safety: don't let empty strings become 0
         const isNumeric =
           rawVal !== null &&
           rawVal !== "" &&
@@ -115,45 +86,59 @@ function createWorkerState<T>() {
             return true;
         }
       }
-
       case "date": {
         if (!filter.value) return true;
         const rowDateStr = String(rawVal ?? "").split("T")[0];
         return rowDateStr === filter.value;
       }
-
       case "checkbox": {
         if (filter.value === "indeterminate") return true;
         return Boolean(rawVal) === filter.value;
       }
-
       default:
         return true;
     }
   }
 
   return {
-    handleMessage(event: MessageEvent<WorkerMessage<T>>) {
+    handleMessage(event: MessageEvent<IncomingMessage<T>>) {
       const msg = event.data;
 
       if (msg.type === "init") {
-        dataset = buildIndex(msg.data, msg.keys);
-        self.postMessage(dataset.map((r) => r.raw));
+        rawData = msg.data;
+        searchIndex = new Array(rawData.length);
+
+        // Pre-compute index strings lazily into a flat array
+        for (let i = 0; i < rawData.length; i++) {
+          let searchString = "";
+          for (let j = 0; j < msg.keys.length; j++) {
+            const val = rawData[i][msg.keys[j] as keyof T];
+            if (val !== null && val !== undefined) {
+              searchString += String(val).toLowerCase() + " ";
+            }
+          }
+          searchIndex[i] = searchString;
+        }
+
+        // Do NOT send the massive payload back to the main thread
+        self.postMessage({ type: "init_done" });
         return;
       }
 
       if (msg.type === "filter") {
-        const { globalFilter, columnFilters } = msg;
-        const lowerGlobal = globalFilter.toLowerCase();
+        const { globalFilter, columnFilters, queryId } = msg;
+        const lowerGlobal = globalFilter ? globalFilter.toLowerCase() : "";
         const result: T[] = [];
 
-        for (let i = 0; i < dataset.length; i++) {
-          const indexedRow = dataset[i];
+        // Loop over the raw data chunk
+        for (let i = 0; i < rawData.length; i++) {
           let passesAll = true;
+          const row = rawData[i];
 
+          // 1. Evaluate Column Filters first (usually faster to reject)
           for (let j = 0; j < columnFilters.length; j++) {
             const filter = columnFilters[j];
-            const cellValue = indexedRow.raw[filter.id as keyof T];
+            const cellValue = row[filter.id as keyof T];
 
             if (!evaluateFilter(cellValue, filter)) {
               passesAll = false;
@@ -163,14 +148,20 @@ function createWorkerState<T>() {
 
           if (!passesAll) continue;
 
-          if (lowerGlobal && !indexedRow.searchText.includes(lowerGlobal)) {
+          // 2. Evaluate Global Filter string search
+          if (lowerGlobal && !searchIndex[i].includes(lowerGlobal)) {
             continue;
           }
 
-          result.push(indexedRow.raw);
+          result.push(row);
         }
 
-        self.postMessage(result);
+        // Return chunk results tagged with the specific queryId
+        self.postMessage({
+          type: "filter_result",
+          queryId,
+          data: result,
+        });
       }
     },
   };
@@ -179,6 +170,6 @@ function createWorkerState<T>() {
 type AppRow = import("@/grid/types").StockRow;
 const worker = createWorkerState<AppRow>();
 
-self.onmessage = (event: MessageEvent<WorkerMessage<AppRow>>) => {
+self.onmessage = (event: MessageEvent<IncomingMessage<AppRow>>) => {
   worker.handleMessage(event);
 };

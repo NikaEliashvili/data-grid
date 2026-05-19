@@ -22,7 +22,7 @@ export function TextFilter<TData, TValue>({
     }
   }
 
-  const debouncedValue = useDebounce(value, 300);
+  const debouncedValue = useDebounce(value, 500);
 
   // Push to table (This is fine in useEffect because it updates an external store, not local state)
   useEffect(() => {

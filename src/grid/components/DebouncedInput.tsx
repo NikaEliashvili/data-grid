@@ -37,6 +37,13 @@ export function DebouncedInput<T extends SupportedValue>({
     };
   }, [localValue, debounce, onChange, parser]);
 
+  useEffect(() => {
+    const syncValue = () => {
+      setLocalValue(String(initialValue ?? ""));
+    };
+    syncValue();
+  }, [initialValue]);
+
   return (
     <div className="relative flex-1 min-w-50 max-w-xs">
       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
