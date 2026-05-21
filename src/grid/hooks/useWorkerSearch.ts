@@ -3,7 +3,7 @@ import type { SearchableKeys, WorkerFilterDef } from "../engine/types";
 
 const WORKER_COUNT =
   typeof navigator !== "undefined" && navigator.hardwareConcurrency
-    ? Math.min(navigator.hardwareConcurrency, 8)
+    ? Math.min(navigator.hardwareConcurrency - 1, 6)
     : 4;
 
 export function useWorkerSearch<TData>(

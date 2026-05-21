@@ -71,8 +71,8 @@ export const GridPagination = memo(function GridPagination({
             <SelectValue placeholder="All" />
           </SelectTrigger>
           <SelectContent align="centerTop">
-            <SelectItem value="all">All</SelectItem>
-            {[...PAGE_SIZES, totalRows].map((opt) => (
+            <SelectItem value={totalRows.toString()}>All</SelectItem>
+            {PAGE_SIZES.map((opt) => (
               <SelectItem key={opt.toString()} value={opt.toString()}>
                 {opt}
               </SelectItem>

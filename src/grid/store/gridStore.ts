@@ -31,16 +31,16 @@ export const useGridStore = create<GridStore>()(
     ...initialState,
 
     setGlobalFilter: (value) =>
-      set({
+      set((prev) => ({
         globalFilter: value,
-        pagination: { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE },
-      }),
+        pagination: { ...prev.pagination, pageIndex: 0 },
+      })),
 
     setColumnFilters: (filters) => {
-      return set({
+      return set((prev) => ({
         columnFilters: filters,
-        pagination: { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE },
-      });
+        pagination: { ...prev.pagination, pageIndex: 0 },
+      }));
     },
 
     setSorting: (sorting) => set({ sorting }),

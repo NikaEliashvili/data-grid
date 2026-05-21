@@ -38,7 +38,7 @@ export function MultiSelectFilter<TData, TValue>({
   );
 
   // Debounce the entire Set
-  const debouncedSelected = useDebounce(selectedValues, 300);
+  const debouncedSelected = useDebounce(selectedValues, 500);
 
   if (rawTableValue !== prevRawTableValue) {
     setPrevRawTableValue(rawTableValue);

@@ -23,8 +23,8 @@ export function RangeFilter<TData, TValue>({
     }
   }
 
-  const debouncedMin = useDebounce(min, 300);
-  const debouncedMax = useDebounce(max, 300);
+  const debouncedMin = useDebounce(min, 500);
+  const debouncedMax = useDebounce(max, 500);
 
   useEffect(() => {
     const currentMin = tableValue?.[0] ?? "";
